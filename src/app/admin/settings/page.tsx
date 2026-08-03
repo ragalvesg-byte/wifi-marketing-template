@@ -401,15 +401,16 @@ export default function SettingsPage() {
               </h2>
               <div className="space-y-4">
                 <div>
-                  <label className="block text-xs font-semibold uppercase text-slate-600 mb-1">O que a tela de Sucesso deve destacar?</label>
+                  <label className="block text-xs font-semibold uppercase text-slate-600 mb-1">Conteúdo principal após o cadastro</label>
                   <select value={settings.post_signup_action || 'SHOW_MESSAGE'} onChange={(e) => setSettings({ ...settings, post_signup_action: e.target.value as StoreSettings['post_signup_action'] })} className="w-full px-4 py-2.5 rounded-xl border border-slate-200 text-sm font-semibold">
-                    <option value="SHOW_MESSAGE">Apenas Mensagem e Botão "Navegar"</option>
+                    <option value="SHOW_MESSAGE">Mensagem Simples</option>
                     <option value="COUPON">Cupom de Desconto</option>
-                    <option value="PROMO">Promoção/Banner já configurado</option>
-                    <option value="MENU">Botão Gigante para Cardápio</option>
-                    <option value="INSTAGRAM">Botão Gigante para Instagram</option>
-                    <option value="GOOGLE">Botão Gigante para Avaliar no Google</option>
-                    <option value="CUSTOM_URL">Redirecionar para URL Customizada</option>
+                    <option value="PROMO">Promoção com Imagem</option>
+                    <option value="BANNER">Banner Principal</option>
+                    <option value="MENU">Cardápio Digital</option>
+                    <option value="INSTAGRAM">Instagram</option>
+                    <option value="GOOGLE">Avaliação Google</option>
+                    <option value="CUSTOM_URL">URL Personalizada</option>
                   </select>
                 </div>
 
@@ -428,6 +429,42 @@ export default function SettingsPage() {
                   <div>
                     <label className="block text-xs font-semibold uppercase text-slate-600 mb-1">Código do Cupom</label>
                     <input type="text" value={settings.promo_coupon_code || ''} onChange={(e) => setSettings({ ...settings, promo_coupon_code: e.target.value })} className="w-full px-4 py-2.5 rounded-xl border border-slate-200 font-mono text-sm uppercase text-emerald-600 font-bold bg-emerald-50" placeholder="DESCONTO10" />
+                  </div>
+                )}
+
+                {(settings.post_signup_action === 'PROMO' || settings.post_signup_action === 'BANNER') && (
+                  <div className="space-y-4 pt-2 border-t border-slate-100">
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      <div className="md:col-span-2">
+                        <label className="block text-xs font-semibold uppercase text-slate-600 mb-1">URL da Imagem</label>
+                        <input type="url" value={settings.post_signup_promo_image_url || ''} onChange={(e) => setSettings({ ...settings, post_signup_promo_image_url: e.target.value })} className="w-full px-4 py-2.5 rounded-xl border border-slate-200 text-sm" placeholder="https://" />
+                      </div>
+                      <div>
+                        <label className="block text-xs font-semibold uppercase text-slate-600 mb-1">Formato da Imagem</label>
+                        <select value={settings.post_signup_promo_image_aspect_ratio || '4:5'} onChange={(e) => setSettings({ ...settings, post_signup_promo_image_aspect_ratio: e.target.value as any })} className="w-full px-4 py-2.5 rounded-xl border border-slate-200 text-sm font-semibold">
+                          <option value="9:16">9:16 Vertical (Story)</option>
+                          <option value="4:5">4:5 Retrato (Recomendado)</option>
+                          <option value="1:1">1:1 Quadrado</option>
+                          <option value="16:9">16:9 Horizontal</option>
+                        </select>
+                      </div>
+                      <div>
+                        <label className="block text-xs font-semibold uppercase text-slate-600 mb-1">Título da Promoção/Banner</label>
+                        <input type="text" value={settings.post_signup_promo_title || ''} onChange={(e) => setSettings({ ...settings, post_signup_promo_title: e.target.value })} className="w-full px-4 py-2.5 rounded-xl border border-slate-200 text-sm" placeholder="Opcional" />
+                      </div>
+                      <div className="md:col-span-2">
+                        <label className="block text-xs font-semibold uppercase text-slate-600 mb-1">Descrição</label>
+                        <input type="text" value={settings.post_signup_promo_description || ''} onChange={(e) => setSettings({ ...settings, post_signup_promo_description: e.target.value })} className="w-full px-4 py-2.5 rounded-xl border border-slate-200 text-sm" placeholder="Opcional" />
+                      </div>
+                      <div>
+                        <label className="block text-xs font-semibold uppercase text-slate-600 mb-1">Texto do Botão Principal</label>
+                        <input type="text" value={settings.post_signup_promo_button_text || ''} onChange={(e) => setSettings({ ...settings, post_signup_promo_button_text: e.target.value })} className="w-full px-4 py-2.5 rounded-xl border border-slate-200 text-sm" placeholder="Ex: Aproveitar Oferta" />
+                      </div>
+                      <div>
+                        <label className="block text-xs font-semibold uppercase text-slate-600 mb-1">URL do Botão</label>
+                        <input type="url" value={settings.post_signup_promo_button_url || ''} onChange={(e) => setSettings({ ...settings, post_signup_promo_button_url: e.target.value })} className="w-full px-4 py-2.5 rounded-xl border border-slate-200 text-sm" placeholder="https:// (Opcional)" />
+                      </div>
+                    </div>
                   </div>
                 )}
                 

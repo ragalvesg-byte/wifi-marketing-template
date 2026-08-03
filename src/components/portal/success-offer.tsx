@@ -163,9 +163,39 @@ export function SuccessOffer({ settings, visitorName, authUrl, openNdsParams }: 
         </div>
       )}
 
-      {settings.post_signup_action === 'PROMO' && settings.landing_media_url && (
-        <div className="w-full rounded-2xl overflow-hidden shadow-md border border-slate-200 aspect-video relative bg-slate-900 mt-4">
-          <img src={settings.landing_media_url} alt="Promo" className="w-full h-full object-cover" />
+      {(settings.post_signup_action === 'PROMO' || settings.post_signup_action === 'BANNER') && settings.post_signup_promo_image_url && (
+        <div className="w-full bg-slate-50 border border-slate-200 rounded-2xl overflow-hidden shadow-sm mt-4">
+          <div 
+            className="w-full bg-slate-100 relative overflow-hidden" 
+            style={{
+              aspectRatio: settings.post_signup_promo_image_aspect_ratio === '9:16' ? '9/16' 
+                : settings.post_signup_promo_image_aspect_ratio === '1:1' ? '1/1'
+                : settings.post_signup_promo_image_aspect_ratio === '16:9' ? '16/9'
+                : '4/5',
+              maxHeight: '40vh' // Limita a altura para não esconder os botões principais
+            }}
+          >
+            <img src={settings.post_signup_promo_image_url} alt="Promoção" className="w-full h-full object-cover" />
+          </div>
+          
+          {(settings.post_signup_promo_title || settings.post_signup_promo_description) && (
+            <div className="p-4 text-left">
+              {settings.post_signup_promo_title && <h3 className="font-bold text-sm text-slate-900 mb-1">{settings.post_signup_promo_title}</h3>}
+              {settings.post_signup_promo_description && <p className="text-xs text-slate-600 mb-3">{settings.post_signup_promo_description}</p>}
+              {settings.post_signup_promo_button_text && (
+                <button 
+                  onClick={() => {
+                    if (settings.post_signup_promo_button_url && typeof window !== 'undefined') {
+                      window.location.href = settings.post_signup_promo_button_url;
+                    }
+                  }}
+                  className="w-full py-2.5 rounded-lg bg-blue-50 hover:bg-blue-100 text-blue-700 text-xs font-bold transition-colors border border-blue-200"
+                >
+                  {settings.post_signup_promo_button_text}
+                </button>
+              )}
+            </div>
+          )}
         </div>
       )}
 

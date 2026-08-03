@@ -159,9 +159,32 @@ export function PreviewMobile({ settings, step }: PreviewMobileProps) {
             </div>
           )}
           
-          {settings.post_signup_action === 'PROMO' && settings.landing_media_url && (
-            <div className="w-full h-32 bg-black/40 rounded-xl overflow-hidden mb-6">
-              <img src={settings.landing_media_url} alt="Promo" className="w-full h-full object-cover" />
+          {(settings.post_signup_action === 'PROMO' || settings.post_signup_action === 'BANNER') && settings.post_signup_promo_image_url && (
+            <div className="bg-white/10 rounded-xl overflow-hidden mb-6 border border-white/20">
+              <div 
+                className="w-full bg-black/40 relative overflow-hidden" 
+                style={{
+                  aspectRatio: settings.post_signup_promo_image_aspect_ratio === '9:16' ? '9/16' 
+                    : settings.post_signup_promo_image_aspect_ratio === '1:1' ? '1/1'
+                    : settings.post_signup_promo_image_aspect_ratio === '16:9' ? '16/9'
+                    : '4/5',
+                  maxHeight: '40vh' // Limita a altura para não esconder os botões principais
+                }}
+              >
+                <img src={settings.post_signup_promo_image_url} alt="Promo" className="w-full h-full object-cover" />
+              </div>
+              
+              {(settings.post_signup_promo_title || settings.post_signup_promo_description) && (
+                <div className="p-4 text-left">
+                  {settings.post_signup_promo_title && <h3 className="font-bold text-sm text-white mb-1">{settings.post_signup_promo_title}</h3>}
+                  {settings.post_signup_promo_description && <p className="text-[11px] text-slate-300 mb-3">{settings.post_signup_promo_description}</p>}
+                  {settings.post_signup_promo_button_text && (
+                    <button className="w-full py-2.5 rounded-lg bg-white/20 hover:bg-white/30 text-white text-xs font-bold transition-colors">
+                      {settings.post_signup_promo_button_text}
+                    </button>
+                  )}
+                </div>
+              )}
             </div>
           )}
 

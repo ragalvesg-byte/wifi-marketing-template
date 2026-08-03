@@ -57,10 +57,16 @@ export interface StoreSettings {
   field_gender_required?: boolean;
 
   // Jornada do Visitante: Depois do Cadastro
-  post_signup_action?: 'COUPON' | 'PROMO' | 'MENU' | 'INSTAGRAM' | 'GOOGLE' | 'CUSTOM_URL' | 'SHOW_MESSAGE';
+  post_signup_action?: 'COUPON' | 'PROMO' | 'BANNER' | 'MENU' | 'INSTAGRAM' | 'GOOGLE' | 'CUSTOM_URL' | 'SHOW_MESSAGE';
   post_signup_title?: string;
   post_signup_message?: string;
   post_signup_url?: string;
+  post_signup_promo_image_url?: string;
+  post_signup_promo_title?: string;
+  post_signup_promo_description?: string;
+  post_signup_promo_button_text?: string;
+  post_signup_promo_button_url?: string;
+  post_signup_promo_image_aspect_ratio?: '9:16' | '4:5' | '1:1' | '16:9';
   post_signup_redirect_mode?: 'NONE' | 'AUTO_3S' | 'AUTO_5S' | 'AUTO_10S' | 'ON_CLICK';
   post_signup_redirect_seconds?: number;
   post_signup_show_coupon?: boolean;

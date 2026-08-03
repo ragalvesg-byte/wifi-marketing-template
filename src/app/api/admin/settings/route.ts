@@ -55,6 +55,8 @@ export async function POST(request: Request) {
     const sanitizedMenu = validateUrl(body.menu_url);
     const sanitizedGoogle = validateUrl(body.google_review_url);
     const sanitizedPostSignupUrl = validateUrl(body.post_signup_url);
+    const sanitizedPostSignupPromoImage = validateUrl(body.post_signup_promo_image_url);
+    const sanitizedPostSignupPromoButton = validateUrl(body.post_signup_promo_button_url);
 
     if (!supabase) {
       return NextResponse.json({
@@ -104,6 +106,12 @@ export async function POST(request: Request) {
       post_signup_title: body.post_signup_title || 'Internet liberada!',
       post_signup_message: body.post_signup_message || 'Aproveite sua conexão. Obrigado por nos visitar!',
       post_signup_url: sanitizedPostSignupUrl,
+      post_signup_promo_image_url: sanitizedPostSignupPromoImage,
+      post_signup_promo_title: body.post_signup_promo_title,
+      post_signup_promo_description: body.post_signup_promo_description,
+      post_signup_promo_button_text: body.post_signup_promo_button_text,
+      post_signup_promo_button_url: sanitizedPostSignupPromoButton,
+      post_signup_promo_image_aspect_ratio: body.post_signup_promo_image_aspect_ratio || '4:5',
       post_signup_redirect_mode: body.post_signup_redirect_mode || 'NONE',
       post_signup_redirect_seconds: body.post_signup_redirect_seconds || 3,
       post_signup_show_coupon: body.post_signup_show_coupon ?? false,
