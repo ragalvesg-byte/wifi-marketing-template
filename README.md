@@ -1,36 +1,96 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# 📶 Wi-Fi Marketing Template — Instalação Individual por Loja
 
-## Getting Started
+O **`wifi-marketing-template`** é uma solução completa, moderna e pronta para produção para transformar redes Wi-Fi de estabelecimentos comerciais (hamburguerias, restaurantes, cafeterias, academias, clínicas e hotéis) em um poderoso canal de captura de leads, relacionamento e fidelização de clientes.
 
-First, run the development server:
+Designed for single-tenant store deployments, each client receives a dedicated Supabase database, isolated repository, custom portal branding, and exclusive store owner admin panel.
 
-```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
+---
+
+## 🚀 Tecnologias Utilizadas
+
+- **Core & Framework:** Next.js (App Router) + TypeScript.
+- **Estilização & UI:** Tailwind CSS v4 + Lucide React + Glassmorphism.
+- **Banco de Dados & Autenticação:** Supabase PostgreSQL + Supabase Auth + RLS (Row Level Security).
+- **Roteadores & Captive Portal:** openNDS (Forwarding Authentication Service - FAS Nível 1, 2 e 3 com HMAC-SHA256).
+- **Gráficos & Relatórios:** Recharts.
+- **Testes Automatizados:** Vitest.
+
+---
+
+## 🎨 Principais Funcionalidades (Fase 1 MVP Comercial)
+
+### 📱 Portal Cativo do Visitante (`/portal`)
+- **Landing Page de Apresentação:** Mídia em destaque (imagem ou vídeo otimizado), promoção do dia e botões diretos para Instagram, Cardápio Digital e Avaliação no Google.
+- **Captura Dinâmica de Leads:** Nome e WhatsApp padrão + E-mail, Nascimento, Cidade e Gênero opcionais e configuráveis por segmento.
+- **Reconhecimento Automático em 1-Clique:** Identificação dupla via Cookie Seguro (`wifi_visitor_device_token`) + MAC Address.
+- **Tela de Sucesso pós-Conexão:** Badge de liberação, Cupom de Desconto com cópia rápida e autorização openNDS.
+- **Presets de Temas:** 8 temas prontos (Hamburgueria, Pizzaria, Sushi, Cafeteria, Restaurante, Academia, Clínica, Hotel).
+
+### 📊 Painel Administrativo do Lojista (`/admin`)
+- **Visão Geral & Indicadores:** Total de clientes, visitantes de hoje, novos cadastros, recorrentes e total de sessões.
+- **Gráficos de Movimento:** Horários de pico e dias da semana com maior fluxo.
+- **Gestão de Contatos:** Busca instantânea por nome/telefone, histórico individual e exportação em CSV/Excel UTF-8.
+- **Personalização da Marca:** Configuração do tema, cores, mídias, cupons e regras de recadastro (7, 15, 30 ou 90 dias).
+
+---
+
+## 🏗️ Visão Geral da Arquitetura
+
+```
++------------------+         HTTP Redirect         +----------------------------------+
+|  Celular/Device  | ----------------------------> | Roteador OpenWrt + openNDS (FAS) |
++------------------+                               +----------------------------------+
+        |                                                           |
+        | Redirecionamento HTTPS com Params (tok, clientmac, ip)   |
+        v                                                           |
++-------------------------------------------------------------------+--+
+|                  Portal Cativo (`/portal`)                           |
+|               (Next.js App Router no Vercel / VPS)                   |
++----------------------------------------------------------------------+
+        |                                       |
+        | 1. Registra dados do visitante        | 2. Redireciona/Autoriza com Token
+        v                                       v    HMAC-SHA256 (via faskey)
++-----------------------+              +-------------------------------+
+|  Supabase Database    |              | openNDS Auth Gateway Endpoint |
+| (Visitors, Sessions,  |              | http://<gw_ip>:<gw_port>/     |
+|  Devices, Settings)   |              | opennds_auth/?tok=<signed_tok>|
++-----------------------+              +-------------------------------+
+        ^                                               |
+        | Leitura/Gestão de Dados                       v
++-----------------------+                      [ Acesso à Internet ]
+| Painel Admin (`/admin`)|                      [ Liberado pelo Roteador]
+|  (Dono da Loja)       |
++-----------------------+
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+---
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+## 📁 Documentação de Instalação e Guias
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+- 📄 [INSTALL.md](file:///c:/Users/USER/Desktop/wifi-markting/INSTALL.md) — Guia de instalação do zero para um novo cliente
+- 📄 [CONFIGURACAO.md](file:///c:/Users/USER/Desktop/wifi-markting/CONFIGURACAO.md) — Manual de configurações da loja e temas
+- 📄 [TESTE_LOCAL_OPENNDS.md](file:///c:/Users/USER/Desktop/wifi-markting/TESTE_LOCAL_OPENNDS.md) — Guia de testes locais em bancada
+- 📄 [INSTALACAO_PRODUCAO_OPENNDS.md](file:///c:/Users/USER/Desktop/wifi-markting/INSTALACAO_PRODUCAO_OPENNDS.md) — Guia de implantação em produção (FAS Nível 3)
+- 📄 [BACKUP.md](file:///c:/Users/USER/Desktop/wifi-markting/BACKUP.md) — Guia de backup e restore no Supabase
+- 📄 [SEGURANCA.md](file:///c:/Users/USER/Desktop/wifi-markting/SEGURANCA.md) — Arquitetura de segurança e conformidade LGPD
+- 📄 [ROADMAP.md](file:///c:/Users/USER/Desktop/wifi-markting/ROADMAP.md) — Planejamento estratégico e evolução em 5 Fases
+- 📄 [PENDENCIAS.md](file:///c:/Users/USER/Desktop/wifi-markting/PENDENCIAS.md) — Checklist de infraestrutura para novas instalações
 
-## Learn More
+---
 
-To learn more about Next.js, take a look at the following resources:
+## ⚡ Inicialização Rápida em Desenvolvimento
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+```bash
+# 1. Clonar e instalar dependências
+git clone https://github.com/seu-usuario/wifi-marketing-template.git
+cd wifi-marketing-template
+npm install
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+# 2. Executar testes automatizados
+npm test
 
-## Deploy on Vercel
+# 3. Executar o servidor de desenvolvimento
+npm run dev
+```
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
-
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+Abra [http://localhost:3000](http://localhost:3000) no seu navegador para acessar o launcher de testes.
