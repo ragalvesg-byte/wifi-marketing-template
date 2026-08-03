@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
 import { cookies } from 'next/headers';
-import { createServerClientInstance } from '@/lib/supabase/server';
+import { createAdminClient } from '@/lib/supabase/admin';
 import { cleanPhoneNumber } from '@/lib/utils';
 import { getRouterDriver } from '@/lib/routers';
 import { isValidMac } from '@/lib/opennds';
@@ -22,7 +22,12 @@ export async function POST(request: Request) {
     const rawMac = body.mac_address;
     const validMac = isValidMac(rawMac) ? rawMac!.toLowerCase() : null;
 
-    const supabase = await createServerClientInstance();
+    let supabase;
+    try {
+      supabase = createAdminClient();
+    } catch (e) {
+      console.warn('Rodando em modo demonstração: ', e);
+    }
     const isDemo = !supabase;
 
     let visitorId: string = 'v-demo-visitor';
