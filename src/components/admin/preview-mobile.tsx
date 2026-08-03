@@ -2,7 +2,7 @@
 
 import React from 'react';
 import { StoreSettings } from '@/types/database';
-import { Instagram, Map, Star, Link as LinkIcon } from 'lucide-react';
+import { Camera, Map, Star, Link as LinkIcon } from 'lucide-react';
 
 interface PreviewMobileProps {
   settings: StoreSettings;
@@ -59,7 +59,7 @@ export function PreviewMobile({ settings, step }: PreviewMobileProps) {
              
              {settings.pre_signup_show_instagram && (
                <button className="w-full py-3 rounded-xl font-bold text-sm bg-white/10 hover:bg-white/20 border border-white/20 flex items-center justify-center gap-2">
-                 <Instagram className="w-4 h-4" /> Instagram
+                 <Camera className="w-4 h-4" /> Instagram
                </button>
              )}
              
@@ -172,7 +172,7 @@ export function PreviewMobile({ settings, step }: PreviewMobileProps) {
             
             {settings.post_signup_show_instagram && (
                <button className="w-full py-3 rounded-xl font-bold text-sm bg-white/10 hover:bg-white/20 border border-white/20 flex items-center justify-center gap-2">
-                 <Instagram className="w-4 h-4" /> Instagram
+                 <Camera className="w-4 h-4" /> Instagram
                </button>
              )}
              

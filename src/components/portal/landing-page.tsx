@@ -2,7 +2,7 @@
 
 import React from 'react';
 import { StoreSettings } from '@/types/database';
-import { Instagram, Map, Star } from 'lucide-react';
+import { Camera, Map, Star } from 'lucide-react';
 
 interface LandingPageProps {
   settings: StoreSettings;
@@ -58,7 +58,7 @@ export function LandingPage({ settings, onContinue }: LandingPageProps) {
 
         {settings.pre_signup_show_instagram && settings.instagram_url && (
           <a href={settings.instagram_url} target="_blank" rel="noopener noreferrer" className="w-full py-3.5 rounded-2xl font-bold text-sm bg-white/10 hover:bg-white/20 border border-white/20 flex items-center justify-center gap-2 text-white backdrop-blur-md transition-all active:scale-[0.98]">
-            <Instagram className="w-5 h-5" /> Siga nosso Instagram
+            <Camera className="w-5 h-5" /> Siga nosso Instagram
           </a>
         )}
         
