@@ -1,4 +1,5 @@
 import React from 'react';
+import { redirect } from 'next/navigation';
 import { ContactsTable } from '@/components/admin/contacts-table';
 import { MOCK_VISITORS } from '@/lib/supabase/mock-data';
 import { createServerClientInstance } from '@/lib/supabase/server';
@@ -10,6 +11,13 @@ export const metadata = {
 
 export default async function ContactsPage() {
   const supabase = await createServerClientInstance();
+
+  if (supabase) {
+    const { data: { user }, error } = await supabase.auth.getUser();
+    if (error || !user) {
+      redirect('/admin/login');
+    }
+  }
   let visitors = MOCK_VISITORS;
 
   if (supabase) {

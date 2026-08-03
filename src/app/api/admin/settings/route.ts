@@ -20,6 +20,11 @@ export async function GET() {
     return NextResponse.json({ settings: MOCK_STORE_SETTINGS, isDemo: true });
   }
 
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) {
+    return NextResponse.json({ error: 'Não autorizado' }, { status: 401 });
+  }
+
   try {
     const { data: settings } = await supabase
       .from('store_settings')
@@ -56,6 +61,11 @@ export async function POST(request: Request) {
         isDemo: true,
         message: 'Modo Demonstração ativo. Alterações aplicadas apenas localmente.',
       });
+    }
+
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) {
+      return NextResponse.json({ error: 'Não autorizado' }, { status: 401 });
     }
 
     const payload = {

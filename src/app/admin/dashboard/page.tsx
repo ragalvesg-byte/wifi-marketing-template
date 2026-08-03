@@ -1,4 +1,5 @@
 import React from 'react';
+import { redirect } from 'next/navigation';
 import { MetricsCards } from '@/components/admin/metrics-cards';
 import { PeakHoursChart } from '@/components/admin/peak-hours-chart';
 import { MOCK_METRICS, MOCK_VISITORS } from '@/lib/supabase/mock-data';
@@ -13,6 +14,13 @@ export const metadata = {
 
 export default async function DashboardPage() {
   const supabase = await createServerClientInstance();
+
+  if (supabase) {
+    const { data: { user }, error } = await supabase.auth.getUser();
+    if (error || !user) {
+      redirect('/admin/login');
+    }
+  }
 
   let metrics: DashboardMetrics = MOCK_METRICS;
   let visitors: Visitor[] = MOCK_VISITORS;

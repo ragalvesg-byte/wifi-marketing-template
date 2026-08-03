@@ -6,10 +6,26 @@ import { getRouterDriver } from '@/lib/routers';
 import { isValidMac } from '@/lib/opennds';
 import { RegisterVisitorPayload } from '@/types/database';
 
+const rateLimitMap = new Map<string, { count: number; resetAt: number }>();
+
 export async function POST(request: Request) {
   try {
     const body: RegisterVisitorPayload = await request.json();
     const cleanPhone = cleanPhoneNumber(body.phone || '');
+
+    // Rate Limiting básico (5 requests per minute per IP)
+    const ip = request.headers.get('x-forwarded-for') || '127.0.0.1';
+    const now = Date.now();
+    const rateData = rateLimitMap.get(ip);
+
+    if (rateData && now < rateData.resetAt) {
+      if (rateData.count >= 5) {
+        return NextResponse.json({ error: 'Muitas requisições. Tente novamente mais tarde.' }, { status: 429 });
+      }
+      rateData.count++;
+    } else {
+      rateLimitMap.set(ip, { count: 1, resetAt: now + 60000 });
+    }
 
     if (!cleanPhone || cleanPhone.length < 10) {
       return NextResponse.json({ error: 'Número de WhatsApp inválido' }, { status: 400 });

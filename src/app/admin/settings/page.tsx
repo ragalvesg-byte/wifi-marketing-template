@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useEffect, useState } from 'react';
+import { useRouter } from 'next/navigation';
 import { MOCK_STORE_SETTINGS } from '@/lib/supabase/mock-data';
 import { StoreSettings, ThemePreset, GoogleReviewTiming } from '@/types/database';
 import { THEME_PRESETS, applyThemePreset } from '@/lib/themes/presets';
@@ -14,18 +15,9 @@ export default function SettingsPage() {
   const [isDemo, setIsDemo] = useState(false);
   const [errorMsg, setErrorMsg] = useState('');
 
+  const router = useRouter();
+
   useEffect(() => {
-    const fetchSettings = async () => {
-      setLoading(true);
-      try {
-        const res = await fetch('/api/admin/settings');
-        if (res.ok) {
-          const data = await res.json();
-          if (data.settings) {
-            setSettings(data.settings);
-          }
-          setIsDemo(data.isDemo || false);
-        }
       } catch {
         // Ignorado
       }
