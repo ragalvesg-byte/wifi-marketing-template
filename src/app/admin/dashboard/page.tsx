@@ -22,8 +22,19 @@ export default async function DashboardPage() {
     }
   }
 
-  let metrics: DashboardMetrics = MOCK_METRICS;
-  let visitors: Visitor[] = MOCK_VISITORS;
+  const isDemoMode = process.env.DEMO_MODE === 'true';
+
+  let metrics: DashboardMetrics = isDemoMode ? MOCK_METRICS : {
+    totalVisitors: 0,
+    todayVisitors: 0,
+    activeNowVisitors: 0,
+    newVisitorsToday: 0,
+    returningVisitors: 0,
+    totalSessions: 0,
+    peakHours: [],
+    peakDays: [],
+  };
+  let visitors: Visitor[] = isDemoMode ? MOCK_VISITORS : [];
 
   if (supabase) {
     try {
@@ -69,15 +80,44 @@ export default async function DashboardPage() {
         visitors = visitorsData;
       }
 
+      // 7. Calcular Horários e Dias de Pico
+      let peakHours = [] as { hour: string; visits: number }[];
+      let peakDays = [] as { day: string; visits: number }[];
+
+      if (totalSessionsCount && totalSessionsCount > 0) {
+        const { data: allSessions } = await supabase.from('wifi_sessions').select('started_at');
+        const hoursCount = new Array(24).fill(0);
+        const daysCount = new Array(7).fill(0);
+
+        if (allSessions) {
+          allSessions.forEach(session => {
+            const date = new Date(session.started_at);
+            hoursCount[date.getHours()]++;
+            daysCount[date.getDay()]++;
+          });
+        }
+
+        peakHours = hoursCount.map((visits, hour) => ({
+          hour: `${hour.toString().padStart(2, '0')}:00`,
+          visits
+        }));
+        
+        const dayNames = ['Dom', 'Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sáb'];
+        peakDays = daysCount.map((visits, day) => ({
+          day: dayNames[day],
+          visits
+        }));
+      }
+
       metrics = {
         totalVisitors: totalVisitorsCount ?? 0,
         todayVisitors: todayVisitorsCount ?? 0,
-        activeNowVisitors: 4, // Conexões ativas no momento via gateway
+        activeNowVisitors: 0,
         newVisitorsToday: newVisitorsTodayCount ?? 0,
         returningVisitors: returningVisitorsCount ?? 0,
         totalSessions: totalSessionsCount ?? 0,
-        peakHours: MOCK_METRICS.peakHours,
-        peakDays: MOCK_METRICS.peakDays,
+        peakHours: peakHours,
+        peakDays: peakDays,
       };
     } catch (err) {
       console.error('Erro ao buscar métricas reais do Supabase:', err);

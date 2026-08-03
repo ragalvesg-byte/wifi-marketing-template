@@ -18,6 +18,9 @@ interface PeakHoursChartProps {
 }
 
 export function PeakHoursChart({ metrics }: PeakHoursChartProps) {
+  const hasHourData = metrics.peakHours && metrics.peakHours.some(d => d.visits > 0);
+  const hasDayData = metrics.peakDays && metrics.peakDays.some(d => d.visits > 0);
+
   return (
     <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
       {/* Gráfico 1: Movimento por Horário */}
@@ -33,23 +36,30 @@ export function PeakHoursChart({ metrics }: PeakHoursChartProps) {
         </div>
 
         <div className="h-64 w-full">
-          <ResponsiveContainer width="100%" height="100%">
-            <BarChart data={metrics.peakHours} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
-              <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f1f5f9" />
-              <XAxis dataKey="hour" tickLine={false} axisLine={false} tick={{ fill: '#64748b', fontSize: 12 }} />
-              <YAxis tickLine={false} axisLine={false} tick={{ fill: '#64748b', fontSize: 12 }} />
-              <Tooltip
-                contentStyle={{
-                  backgroundColor: '#0f172a',
-                  color: '#ffffff',
-                  borderRadius: '12px',
-                  border: 'none',
-                  fontSize: '12px',
-                }}
-              />
-              <Bar dataKey="visits" name="Acessos" fill="#2563eb" radius={[6, 6, 0, 0]} />
-            </BarChart>
-          </ResponsiveContainer>
+          {hasHourData ? (
+            <ResponsiveContainer width="100%" height="100%">
+              <BarChart data={metrics.peakHours} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
+                <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f1f5f9" />
+                <XAxis dataKey="hour" tickLine={false} axisLine={false} tick={{ fill: '#64748b', fontSize: 12 }} />
+                <YAxis tickLine={false} axisLine={false} tick={{ fill: '#64748b', fontSize: 12 }} />
+                <Tooltip
+                  contentStyle={{
+                    backgroundColor: '#0f172a',
+                    color: '#ffffff',
+                    borderRadius: '12px',
+                    border: 'none',
+                    fontSize: '12px',
+                  }}
+                />
+                <Bar dataKey="visits" name="Acessos" fill="#2563eb" radius={[6, 6, 0, 0]} />
+              </BarChart>
+            </ResponsiveContainer>
+          ) : (
+            <div className="h-full flex flex-col items-center justify-center text-slate-400">
+              <Clock className="w-8 h-8 mx-auto mb-2 opacity-20" />
+              <p className="text-sm font-medium">Ainda não há dados suficientes para gerar estatísticas.</p>
+            </div>
+          )}
         </div>
       </div>
 
@@ -66,23 +76,30 @@ export function PeakHoursChart({ metrics }: PeakHoursChartProps) {
         </div>
 
         <div className="h-64 w-full">
-          <ResponsiveContainer width="100%" height="100%">
-            <BarChart data={metrics.peakDays} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
-              <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f1f5f9" />
-              <XAxis dataKey="day" tickLine={false} axisLine={false} tick={{ fill: '#64748b', fontSize: 12 }} />
-              <YAxis tickLine={false} axisLine={false} tick={{ fill: '#64748b', fontSize: 12 }} />
-              <Tooltip
-                contentStyle={{
-                  backgroundColor: '#0f172a',
-                  color: '#ffffff',
-                  borderRadius: '12px',
-                  border: 'none',
-                  fontSize: '12px',
-                }}
-              />
-              <Bar dataKey="visits" name="Conexões" fill="#4f46e5" radius={[6, 6, 0, 0]} />
-            </BarChart>
-          </ResponsiveContainer>
+          {hasDayData ? (
+            <ResponsiveContainer width="100%" height="100%">
+              <BarChart data={metrics.peakDays} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
+                <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f1f5f9" />
+                <XAxis dataKey="day" tickLine={false} axisLine={false} tick={{ fill: '#64748b', fontSize: 12 }} />
+                <YAxis tickLine={false} axisLine={false} tick={{ fill: '#64748b', fontSize: 12 }} />
+                <Tooltip
+                  contentStyle={{
+                    backgroundColor: '#0f172a',
+                    color: '#ffffff',
+                    borderRadius: '12px',
+                    border: 'none',
+                    fontSize: '12px',
+                  }}
+                />
+                <Bar dataKey="visits" name="Conexões" fill="#4f46e5" radius={[6, 6, 0, 0]} />
+              </BarChart>
+            </ResponsiveContainer>
+          ) : (
+            <div className="h-full flex flex-col items-center justify-center text-slate-400">
+              <CalendarDays className="w-8 h-8 mx-auto mb-2 opacity-20" />
+              <p className="text-sm font-medium">Ainda não há dados suficientes para gerar estatísticas.</p>
+            </div>
+          )}
         </div>
       </div>
     </div>
