@@ -18,6 +18,27 @@ export default function SettingsPage() {
   const router = useRouter();
 
   useEffect(() => {
+    const fetchSettings = async () => {
+      setLoading(true);
+      try {
+        const { createClient } = await import('@/lib/supabase/client');
+        const supabase = createClient();
+        if (supabase) {
+          const { data: { user } } = await supabase.auth.getUser();
+          if (!user) {
+            router.push('/admin/login');
+            return;
+          }
+        }
+        
+        const res = await fetch('/api/admin/settings');
+        if (res.ok) {
+          const data = await res.json();
+          if (data.settings) {
+            setSettings(data.settings);
+          }
+          setIsDemo(data.isDemo || false);
+        }
       } catch {
         // Ignorado
       }
@@ -25,7 +46,7 @@ export default function SettingsPage() {
     };
 
     fetchSettings();
-  }, []);
+  }, [router]);
 
   const handleThemeSelect = (themeId: ThemePreset) => {
     const updated = applyThemePreset(settings, themeId);
