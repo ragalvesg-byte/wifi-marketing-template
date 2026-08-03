@@ -54,6 +54,7 @@ export async function POST(request: Request) {
     const sanitizedFacebook = validateUrl(body.facebook_url);
     const sanitizedMenu = validateUrl(body.menu_url);
     const sanitizedGoogle = validateUrl(body.google_review_url);
+    const sanitizedPostSignupUrl = validateUrl(body.post_signup_url);
 
     if (!supabase) {
       return NextResponse.json({
@@ -89,6 +90,26 @@ export async function POST(request: Request) {
       google_review_timing: body.google_review_timing || 'POST_CONNECT',
 
       preset_theme: body.preset_theme || 'CUSTOM',
+
+      // Jornada do Visitante: Antes do Cadastro
+      pre_signup_enabled: body.pre_signup_enabled ?? true,
+      pre_signup_show_banner: body.pre_signup_show_banner ?? true,
+      pre_signup_show_promo: body.pre_signup_show_promo ?? true,
+      pre_signup_show_instagram: body.pre_signup_show_instagram ?? true,
+      pre_signup_show_menu: body.pre_signup_show_menu ?? true,
+      pre_signup_show_google_review: body.pre_signup_show_google_review ?? true,
+
+      // Jornada do Visitante: Depois do Cadastro
+      post_signup_action: body.post_signup_action || 'SHOW_MESSAGE',
+      post_signup_title: body.post_signup_title || 'Internet liberada!',
+      post_signup_message: body.post_signup_message || 'Aproveite sua conexão. Obrigado por nos visitar!',
+      post_signup_url: sanitizedPostSignupUrl,
+      post_signup_redirect_mode: body.post_signup_redirect_mode || 'NONE',
+      post_signup_redirect_seconds: body.post_signup_redirect_seconds || 3,
+      post_signup_show_coupon: body.post_signup_show_coupon ?? false,
+      post_signup_show_instagram: body.post_signup_show_instagram ?? false,
+      post_signup_show_menu: body.post_signup_show_menu ?? false,
+      post_signup_show_google_review: body.post_signup_show_google_review ?? false,
 
       field_email_enabled: body.field_email_enabled ?? false,
       field_dob_enabled: body.field_dob_enabled ?? false,

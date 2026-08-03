@@ -1,10 +1,11 @@
 'use client';
 
 import React, { useEffect, useState, use } from 'react';
+import { LandingPage } from '@/components/portal/landing-page';
 import { VisitorForm } from '@/components/portal/visitor-form';
 import { ReturningVisitor } from '@/components/portal/returning-visitor';
 import { SuccessOffer } from '@/components/portal/success-offer';
-import { parseOpenNdsParams, buildOpenNdsAuthUrl } from '@/lib/opennds';
+import { parseOpenNdsParams } from '@/lib/opennds';
 import { MOCK_STORE_SETTINGS } from '@/lib/supabase/mock-data';
 import { StoreSettings, OpenNdsParams, Visitor } from '@/types/database';
 import { Loader2 } from 'lucide-react';
@@ -20,8 +21,8 @@ export default function PortalPage({ searchParams }: PortalPageProps) {
   const [knownVisitor, setKnownVisitor] = useState<Visitor | null>(null);
   const [checkingMac, setCheckingMac] = useState(true);
 
-  // Estado de fluxo da tela: 'FORM' | 'RETURNING' | 'SUCCESS'
-  const [step, setStep] = useState<'FORM' | 'RETURNING' | 'SUCCESS'>('FORM');
+  // Estado de fluxo da tela
+  const [step, setStep] = useState<'LANDING' | 'FORM' | 'RETURNING' | 'SUCCESS'>('LANDING');
   const [successData, setSuccessData] = useState<{
     visitorName: string;
     authUrl: string;
@@ -38,6 +39,7 @@ export default function PortalPage({ searchParams }: PortalPageProps) {
 
     const checkDeviceAndSettings = async () => {
       setCheckingMac(true);
+      let loadedSettings = MOCK_STORE_SETTINGS;
 
       // 1. Buscar configurações reais da loja
       try {
@@ -45,7 +47,8 @@ export default function PortalPage({ searchParams }: PortalPageProps) {
         if (settingsRes.ok) {
           const settingsData = await settingsRes.json();
           if (settingsData.settings) {
-            setSettings(settingsData.settings);
+            loadedSettings = settingsData.settings;
+            setSettings(loadedSettings);
           }
         }
       } catch {
@@ -61,11 +64,20 @@ export default function PortalPage({ searchParams }: PortalPageProps) {
             if (data.found && data.visitor && !data.needsRelogin) {
               setKnownVisitor(data.visitor);
               setStep('RETURNING');
+              setCheckingMac(false);
+              return;
             }
           }
         } catch {
-          // Ignorado em caso de erro, segue para o formulário
+          // Ignorado em caso de erro, segue fluxo normal
         }
+      }
+
+      // Se não é visitante recorrente, decide entre LANDING ou FORM
+      if (loadedSettings.pre_signup_enabled !== false) {
+        setStep('LANDING');
+      } else {
+        setStep('FORM');
       }
 
       setCheckingMac(false);
@@ -77,23 +89,6 @@ export default function PortalPage({ searchParams }: PortalPageProps) {
   const handleSuccess = (data: { visitorName: string; authUrl: string; totalVisits: number }) => {
     setSuccessData(data);
     setStep('SUCCESS');
-
-    // Tenta efetuar auto-redirecionamento de liberação para o openNDS no roteador após 1.5s
-    const authTarget = data.authUrl || buildOpenNdsAuthUrl({
-      gatewayaddress: openNdsParams.gatewayaddress,
-      gatewayport: openNdsParams.gatewayport,
-      tok: openNdsParams.tok,
-    });
-
-    if (authTarget) {
-      setTimeout(() => {
-        try {
-          window.location.href = authTarget;
-        } catch {
-          // Fallback manual através do botão se o navegador bloquear redirecionamento automático
-        }
-      }, 2000);
-    }
   };
 
   return (
@@ -120,12 +115,19 @@ export default function PortalPage({ searchParams }: PortalPageProps) {
           settings={settings}
           visitorName={successData.visitorName}
           authUrl={successData.authUrl}
+          openNdsParams={openNdsParams}
+        />
+      ) : step === 'LANDING' ? (
+        <LandingPage 
+          settings={settings} 
+          onContinue={() => setStep('FORM')} 
         />
       ) : (
         <VisitorForm
           settings={settings}
           openNdsParams={openNdsParams}
           onSuccess={handleSuccess}
+          onBack={settings.pre_signup_enabled !== false ? () => setStep('LANDING') : undefined}
         />
       )}
     </main>

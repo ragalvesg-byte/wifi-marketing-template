@@ -5,7 +5,10 @@ import { useRouter } from 'next/navigation';
 import { MOCK_STORE_SETTINGS } from '@/lib/supabase/mock-data';
 import { StoreSettings, ThemePreset, GoogleReviewTiming } from '@/types/database';
 import { THEME_PRESETS, applyThemePreset } from '@/lib/themes/presets';
-import { Settings, Save, Check, Palette, Tag, Loader2, AlertCircle, Sparkles, Link as LinkIcon, UserCheck, Video } from 'lucide-react';
+import { Settings, Save, Check, Palette, Loader2, AlertCircle, Sparkles, Link as LinkIcon, UserCheck, Video, LayoutTemplate, Share2, Smartphone } from 'lucide-react';
+
+// Novo componente de Prévia
+import { PreviewMobile } from '@/components/admin/preview-mobile';
 
 export default function SettingsPage() {
   const [settings, setSettings] = useState<StoreSettings>(MOCK_STORE_SETTINGS);
@@ -14,6 +17,9 @@ export default function SettingsPage() {
   const [saving, setSaving] = useState(false);
   const [isDemo, setIsDemo] = useState(false);
   const [errorMsg, setErrorMsg] = useState('');
+  
+  // Controle de Abas para a prévia e configurações (0 = Antes, 1 = Form, 2 = Depois)
+  const [activeTab, setActiveTab] = useState<'PRE' | 'FORM' | 'POST'>('PRE');
 
   const router = useRouter();
 
@@ -35,7 +41,10 @@ export default function SettingsPage() {
         if (res.ok) {
           const data = await res.json();
           if (data.settings) {
-            setSettings(data.settings);
+            setSettings({
+              ...MOCK_STORE_SETTINGS, // fallbacks
+              ...data.settings
+            });
           }
           setIsDemo(data.isDemo || false);
         }
@@ -91,474 +100,425 @@ export default function SettingsPage() {
   }
 
   return (
-    <div className="space-y-6 max-w-4xl">
-      <div>
-        <h1 className="text-2xl font-extrabold text-slate-900 tracking-tight flex items-center gap-2">
-          <Settings className="w-6 h-6 text-blue-600" />
-          Configurações da Loja & Captura de Leads
-        </h1>
-        <p className="text-sm text-slate-500 mt-1">
-          Personalize a marca, ative temas pré-configurados por segmento e defina os dados coletados dos visitantes.
-        </p>
-      </div>
-
-      {saved && (
-        <div className="p-4 bg-emerald-50 border border-emerald-200 text-emerald-800 rounded-2xl flex items-center gap-2 font-semibold text-sm">
-          <Check className="w-5 h-5 text-emerald-600" />
-          {isDemo
-            ? 'Configurações atualizadas localmente (Modo Demonstração).'
-            : 'Configurações salvas no banco Supabase com sucesso!'}
-        </div>
-      )}
-
-      {errorMsg && (
-        <div className="p-4 bg-rose-50 border border-rose-200 text-rose-800 rounded-2xl flex items-center gap-2 font-semibold text-sm">
-          <AlertCircle className="w-5 h-5 text-rose-600" />
-          {errorMsg}
-        </div>
-      )}
-
-      <form onSubmit={handleSubmit} className="space-y-6">
-        {/* BLOCO 1: SELETOR DE TEMAS PRONTOS POR SEGMENTO */}
-        <div className="bg-white rounded-2xl border border-slate-200/80 p-6 shadow-xs space-y-4">
-          <div className="flex items-center justify-between border-b border-slate-100 pb-3">
-            <h2 className="text-base font-bold text-slate-900 flex items-center gap-2">
-              <Sparkles className="w-5 h-5 text-amber-500" />
-              Temas Prontos por Segmento Comercial
-            </h2>
-            <span className="text-xs text-slate-400">Clique para aplicar predefinições visuais</span>
-          </div>
-
-          <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-            {Object.values(THEME_PRESETS).map((preset) => {
-              const isSelected = settings.preset_theme === preset.id;
-              return (
-                <button
-                  type="button"
-                  key={preset.id}
-                  onClick={() => handleThemeSelect(preset.id)}
-                  className={`p-3 rounded-2xl border text-left transition-all relative overflow-hidden flex flex-col justify-between ${
-                    isSelected
-                      ? 'border-blue-600 bg-blue-50/40 ring-2 ring-blue-500/30'
-                      : 'border-slate-200 hover:border-slate-300 bg-slate-50/50'
-                  }`}
-                >
-                  <div className="flex items-center justify-between mb-2">
-                    <div
-                      className="w-4 h-4 rounded-full border border-white/50 shadow-xs"
-                      style={{ backgroundColor: preset.primaryColor }}
-                    />
-                    {isSelected && <Check className="w-4 h-4 text-blue-600" />}
-                  </div>
-                  <span className="text-xs font-extrabold text-slate-900 leading-tight">
-                    {preset.name}
-                  </span>
-                </button>
-              );
-            })}
-          </div>
+    <div className="flex flex-col xl:flex-row gap-8 max-w-[1400px]">
+      
+      {/* LADO ESQUERDO: CONFIGURAÇÕES */}
+      <div className="flex-1 space-y-6">
+        <div>
+          <h1 className="text-2xl font-extrabold text-slate-900 tracking-tight flex items-center gap-2">
+            <Settings className="w-6 h-6 text-blue-600" />
+            Jornada do Visitante & Configurações
+          </h1>
+          <p className="text-sm text-slate-500 mt-1">
+            Personalize a marca, ative temas pré-configurados e defina exatamente o que o visitante vê antes e depois do cadastro.
+          </p>
         </div>
 
-        {/* BLOCO 2: CAPTURA DINÂMICA DE LEADS */}
-        <div className="bg-white rounded-2xl border border-slate-200/80 p-6 shadow-xs space-y-4">
-          <div className="border-b border-slate-100 pb-3">
-            <h2 className="text-base font-bold text-slate-900 flex items-center gap-2">
-              <UserCheck className="w-5 h-5 text-emerald-600" />
-              Captura Dinâmica de Leads (Formulário do Visitante)
-            </h2>
-            <p className="text-xs text-slate-500 mt-1">
-              Nome e WhatsApp são mantidos como obrigatórios padrão. Escolha quais campos adicionais deseja solicitar aos clientes.
-            </p>
+        {saved && (
+          <div className="p-4 bg-emerald-50 border border-emerald-200 text-emerald-800 rounded-2xl flex items-center gap-2 font-semibold text-sm">
+            <Check className="w-5 h-5 text-emerald-600" />
+            {isDemo
+              ? 'Configurações atualizadas localmente (Modo Demonstração).'
+              : 'Configurações salvas no banco Supabase com sucesso!'}
           </div>
+        )}
 
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 pt-1">
-            {/* Campo E-mail */}
-            <div className="p-4 bg-slate-50 rounded-2xl border border-slate-200/60 flex items-center justify-between">
-              <div>
-                <span className="text-sm font-bold text-slate-900 block">E-mail</span>
-                <span className="text-xs text-slate-500">Solicitar endereço de e-mail</span>
-              </div>
-              <div className="flex items-center gap-3">
-                <label className="flex items-center gap-1.5 cursor-pointer text-xs text-slate-700 font-semibold">
-                  <input
-                    type="checkbox"
-                    checked={settings.field_email_enabled}
-                    onChange={(e) =>
-                      setSettings({
-                        ...settings,
-                        field_email_enabled: e.target.checked,
-                        field_email_required: e.target.checked ? settings.field_email_required : false,
-                      })
-                    }
-                    className="w-4 h-4 rounded text-blue-600 focus:ring-blue-500 border-slate-300"
-                  />
-                  Ativado
-                </label>
-                {settings.field_email_enabled && (
-                  <label className="flex items-center gap-1.5 cursor-pointer text-xs text-rose-600 font-semibold">
-                    <input
-                      type="checkbox"
-                      checked={settings.field_email_required}
-                      onChange={(e) => setSettings({ ...settings, field_email_required: e.target.checked })}
-                      className="w-4 h-4 rounded text-rose-600 focus:ring-rose-500 border-slate-300"
-                    />
-                    Obrigatório
-                  </label>
-                )}
-              </div>
-            </div>
-
-            {/* Campo Data de Nascimento */}
-            <div className="p-4 bg-slate-50 rounded-2xl border border-slate-200/60 flex items-center justify-between">
-              <div>
-                <span className="text-sm font-bold text-slate-900 block">Data de Nascimento</span>
-                <span className="text-xs text-slate-500">Identificar aniversariantes</span>
-              </div>
-              <div className="flex items-center gap-3">
-                <label className="flex items-center gap-1.5 cursor-pointer text-xs text-slate-700 font-semibold">
-                  <input
-                    type="checkbox"
-                    checked={settings.field_dob_enabled}
-                    onChange={(e) =>
-                      setSettings({
-                        ...settings,
-                        field_dob_enabled: e.target.checked,
-                        field_dob_required: e.target.checked ? settings.field_dob_required : false,
-                      })
-                    }
-                    className="w-4 h-4 rounded text-blue-600 focus:ring-blue-500 border-slate-300"
-                  />
-                  Ativado
-                </label>
-                {settings.field_dob_enabled && (
-                  <label className="flex items-center gap-1.5 cursor-pointer text-xs text-rose-600 font-semibold">
-                    <input
-                      type="checkbox"
-                      checked={settings.field_dob_required}
-                      onChange={(e) => setSettings({ ...settings, field_dob_required: e.target.checked })}
-                      className="w-4 h-4 rounded text-rose-600 focus:ring-rose-500 border-slate-300"
-                    />
-                    Obrigatório
-                  </label>
-                )}
-              </div>
-            </div>
-
-            {/* Campo Cidade */}
-            <div className="p-4 bg-slate-50 rounded-2xl border border-slate-200/60 flex items-center justify-between">
-              <div>
-                <span className="text-sm font-bold text-slate-900 block">Cidade</span>
-                <span className="text-xs text-slate-500">Cidade de origem do visitante</span>
-              </div>
-              <div className="flex items-center gap-3">
-                <label className="flex items-center gap-1.5 cursor-pointer text-xs text-slate-700 font-semibold">
-                  <input
-                    type="checkbox"
-                    checked={settings.field_city_enabled}
-                    onChange={(e) =>
-                      setSettings({
-                        ...settings,
-                        field_city_enabled: e.target.checked,
-                        field_city_required: e.target.checked ? settings.field_city_required : false,
-                      })
-                    }
-                    className="w-4 h-4 rounded text-blue-600 focus:ring-blue-500 border-slate-300"
-                  />
-                  Ativado
-                </label>
-                {settings.field_city_enabled && (
-                  <label className="flex items-center gap-1.5 cursor-pointer text-xs text-rose-600 font-semibold">
-                    <input
-                      type="checkbox"
-                      checked={settings.field_city_required}
-                      onChange={(e) => setSettings({ ...settings, field_city_required: e.target.checked })}
-                      className="w-4 h-4 rounded text-rose-600 focus:ring-rose-500 border-slate-300"
-                    />
-                    Obrigatório
-                  </label>
-                )}
-              </div>
-            </div>
-
-            {/* Campo Gênero */}
-            <div className="p-4 bg-slate-50 rounded-2xl border border-slate-200/60 flex items-center justify-between">
-              <div>
-                <span className="text-sm font-bold text-slate-900 block">Gênero</span>
-                <span className="text-xs text-slate-500">Segmentação demográfica</span>
-              </div>
-              <div className="flex items-center gap-3">
-                <label className="flex items-center gap-1.5 cursor-pointer text-xs text-slate-700 font-semibold">
-                  <input
-                    type="checkbox"
-                    checked={settings.field_gender_enabled}
-                    onChange={(e) =>
-                      setSettings({
-                        ...settings,
-                        field_gender_enabled: e.target.checked,
-                        field_gender_required: e.target.checked ? settings.field_gender_required : false,
-                      })
-                    }
-                    className="w-4 h-4 rounded text-blue-600 focus:ring-blue-500 border-slate-300"
-                  />
-                  Ativado
-                </label>
-                {settings.field_gender_enabled && (
-                  <label className="flex items-center gap-1.5 cursor-pointer text-xs text-rose-600 font-semibold">
-                    <input
-                      type="checkbox"
-                      checked={settings.field_gender_required}
-                      onChange={(e) => setSettings({ ...settings, field_gender_required: e.target.checked })}
-                      className="w-4 h-4 rounded text-rose-600 focus:ring-rose-500 border-slate-300"
-                    />
-                    Obrigatório
-                  </label>
-                )}
-              </div>
-            </div>
+        {errorMsg && (
+          <div className="p-4 bg-rose-50 border border-rose-200 text-rose-800 rounded-2xl flex items-center gap-2 font-semibold text-sm">
+            <AlertCircle className="w-5 h-5 text-rose-600" />
+            {errorMsg}
           </div>
-        </div>
+        )}
 
-        {/* BLOCO 3: MÍDIA E DESTAQUES DA LANDING PAGE */}
-        <div className="bg-white rounded-2xl border border-slate-200/80 p-6 shadow-xs space-y-4">
-          <h2 className="text-base font-bold text-slate-900 flex items-center gap-2 border-b border-slate-100 pb-3">
-            <Video className="w-5 h-5 text-purple-600" />
-            Mídia e Destaques da Landing Page
-          </h2>
-
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div>
-              <label className="block text-xs font-semibold uppercase tracking-wider text-slate-600 mb-1">
-                Tipo de Mídia em Destaque
-              </label>
-              <select
-                value={settings.landing_media_type || 'IMAGE'}
-                onChange={(e) => setSettings({ ...settings, landing_media_type: e.target.value as 'IMAGE' | 'VIDEO' })}
-                className="w-full px-4 py-2.5 rounded-xl border border-slate-200 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/30 font-semibold"
-              >
-                <option value="IMAGE">Imagem em Destaque</option>
-                <option value="VIDEO">Vídeo (YouTube / Embed URL)</option>
-              </select>
-            </div>
-
-            <div>
-              <label className="block text-xs font-semibold uppercase tracking-wider text-slate-600 mb-1">
-                URL da Mídia (Imagem ou Vídeo)
-              </label>
-              <input
-                type="text"
-                placeholder="https://..."
-                value={settings.landing_media_url || ''}
-                onChange={(e) => setSettings({ ...settings, landing_media_url: e.target.value })}
-                className="w-full px-4 py-2.5 rounded-xl border border-slate-200 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/30"
-              />
-            </div>
-
-            <div>
-              <label className="block text-xs font-semibold uppercase tracking-wider text-slate-600 mb-1">
-                Título da Oferta do Dia
-              </label>
-              <input
-                type="text"
-                placeholder="Ex: Prato do Dia / Combo Especial"
-                value={settings.featured_promo_title || ''}
-                onChange={(e) => setSettings({ ...settings, featured_promo_title: e.target.value })}
-                className="w-full px-4 py-2.5 rounded-xl border border-slate-200 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/30"
-              />
-            </div>
-
-            <div>
-              <label className="block text-xs font-semibold uppercase tracking-wider text-slate-600 mb-1">
-                Descrição da Promoção
-              </label>
-              <input
-                type="text"
-                placeholder="Ex: Ganhe 10% de desconto ao se conectar"
-                value={settings.featured_promo_description || ''}
-                onChange={(e) => setSettings({ ...settings, featured_promo_description: e.target.value })}
-                className="w-full px-4 py-2.5 rounded-xl border border-slate-200 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/30"
-              />
-            </div>
-          </div>
-        </div>
-
-        {/* BLOCO 4: LINKS SOCIAIS & AVALIAÇÃO GOOGLE */}
-        <div className="bg-white rounded-2xl border border-slate-200/80 p-6 shadow-xs space-y-4">
-          <h2 className="text-base font-bold text-slate-900 flex items-center gap-2 border-b border-slate-100 pb-3">
-            <LinkIcon className="w-5 h-5 text-indigo-600" />
-            Links Sociais, Cardápio e Avaliação Google
-          </h2>
-
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div>
-              <label className="block text-xs font-semibold uppercase tracking-wider text-slate-600 mb-1">
-                URL do Instagram
-              </label>
-              <input
-                type="text"
-                placeholder="https://instagram.com/sualoja"
-                value={settings.instagram_url || ''}
-                onChange={(e) => setSettings({ ...settings, instagram_url: e.target.value })}
-                className="w-full px-4 py-2.5 rounded-xl border border-slate-200 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/30"
-              />
-            </div>
-
-            <div>
-              <label className="block text-xs font-semibold uppercase tracking-wider text-slate-600 mb-1">
-                URL do Cardápio Digital
-              </label>
-              <input
-                type="text"
-                placeholder="https://cardapio.sualoja.com.br"
-                value={settings.menu_url || ''}
-                onChange={(e) => setSettings({ ...settings, menu_url: e.target.value })}
-                className="w-full px-4 py-2.5 rounded-xl border border-slate-200 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/30"
-              />
-            </div>
-
-            <div>
-              <label className="block text-xs font-semibold uppercase tracking-wider text-slate-600 mb-1">
-                Link de Avaliação do Google Meu Negócio
-              </label>
-              <input
-                type="text"
-                placeholder="https://g.page/r/.../review"
-                value={settings.google_review_url || ''}
-                onChange={(e) => setSettings({ ...settings, google_review_url: e.target.value })}
-                className="w-full px-4 py-2.5 rounded-xl border border-slate-200 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/30"
-              />
-            </div>
-
-            <div>
-              <label className="block text-xs font-semibold uppercase tracking-wider text-slate-600 mb-1">
-                Exibir Botão do Google
-              </label>
-              <select
-                value={settings.google_review_timing || 'POST_CONNECT'}
-                onChange={(e) => setSettings({ ...settings, google_review_timing: e.target.value as GoogleReviewTiming })}
-                className="w-full px-4 py-2.5 rounded-xl border border-slate-200 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/30 font-semibold"
-              >
-                <option value="PRE_CONNECT">Antes da Conexão (Landing Page)</option>
-                <option value="POST_CONNECT">Depois da Conexão (Tela de Sucesso)</option>
-                <option value="BOTH">Em Ambas as Telas</option>
-              </select>
-            </div>
-          </div>
-        </div>
-
-        {/* BLOCO 5: DADOS GERAIS DA LOJA E MARCA */}
-        <div className="bg-white rounded-2xl border border-slate-200/80 p-6 shadow-xs space-y-4">
-          <h2 className="text-base font-bold text-slate-900 flex items-center gap-2 border-b border-slate-100 pb-3">
-            <Palette className="w-5 h-5 text-blue-600" />
-            Dados da Marca & Regra de Recadastro
-          </h2>
-
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div>
-              <label className="block text-xs font-semibold uppercase tracking-wider text-slate-600 mb-1">
-                Nome do Estabelecimento
-              </label>
-              <input
-                type="text"
-                required
-                value={settings.store_name}
-                onChange={(e) => setSettings({ ...settings, store_name: e.target.value })}
-                className="w-full px-4 py-2.5 rounded-xl border border-slate-200 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/30"
-              />
-            </div>
-
-            <div>
-              <label className="block text-xs font-semibold uppercase tracking-wider text-slate-600 mb-1">
-                Cor Primária (Botões e Destaques)
-              </label>
-              <div className="flex items-center gap-3">
-                <input
-                  type="color"
-                  value={settings.primary_color || '#2563eb'}
-                  onChange={(e) => setSettings({ ...settings, primary_color: e.target.value })}
-                  className="w-10 h-10 rounded-xl border border-slate-200 cursor-pointer p-0.5"
-                />
-                <input
-                  type="text"
-                  value={settings.primary_color || '#2563eb'}
-                  onChange={(e) => setSettings({ ...settings, primary_color: e.target.value })}
-                  className="w-full px-4 py-2.5 rounded-xl border border-slate-200 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/30 font-mono"
-                />
-              </div>
-            </div>
-
-            <div>
-              <label className="block text-xs font-semibold uppercase tracking-wider text-slate-600 mb-1">
-                URL da Logomarca
-              </label>
-              <input
-                type="text"
-                value={settings.logo_url || ''}
-                onChange={(e) => setSettings({ ...settings, logo_url: e.target.value })}
-                className="w-full px-4 py-2.5 rounded-xl border border-slate-200 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/30"
-              />
-            </div>
-
-            <div>
-              <label className="block text-xs font-semibold uppercase tracking-wider text-slate-600 mb-1">
-                URL da Imagem de Fundo
-              </label>
-              <input
-                type="text"
-                value={settings.background_url || ''}
-                onChange={(e) => setSettings({ ...settings, background_url: e.target.value })}
-                className="w-full px-4 py-2.5 rounded-xl border border-slate-200 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/30"
-              />
-            </div>
-
-            <div>
-              <label className="block text-xs font-semibold uppercase tracking-wider text-slate-600 mb-1">
-                Código do Cupom de Desconto
-              </label>
-              <input
-                type="text"
-                value={settings.promo_coupon_code || ''}
-                onChange={(e) => setSettings({ ...settings, promo_coupon_code: e.target.value })}
-                className="w-full px-4 py-2.5 rounded-xl border border-slate-200 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/30 font-mono font-bold"
-              />
-            </div>
-
-            <div>
-              <label className="block text-xs font-semibold uppercase tracking-wider text-slate-600 mb-1">
-                Re-cadastro do Cliente Após (Dias)
-              </label>
-              <select
-                value={settings.relogin_days_interval || 7}
-                onChange={(e) => setSettings({ ...settings, relogin_days_interval: parseInt(e.target.value) })}
-                className="w-full px-4 py-2.5 rounded-xl border border-slate-200 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/30 font-semibold"
-              >
-                <option value={7}>A cada 7 dias</option>
-                <option value={15}>A cada 15 dias</option>
-                <option value={30}>A cada 30 dias</option>
-                <option value={90}>A cada 90 dias</option>
-              </select>
-            </div>
-          </div>
-        </div>
-
-        {/* Botão de Salvar */}
-        <div className="flex justify-end">
-          <button
-            type="submit"
-            disabled={saving}
-            className="px-8 py-3.5 bg-blue-600 hover:bg-blue-500 text-white font-bold text-base rounded-2xl shadow-lg shadow-blue-600/20 transition-all flex items-center gap-2"
+        {/* NAVEGAÇÃO ENTRE ETAPAS */}
+        <div className="flex bg-white rounded-2xl border border-slate-200 p-1 shadow-sm overflow-hidden">
+          <button 
+            type="button"
+            onClick={() => setActiveTab('PRE')}
+            className={`flex-1 py-2.5 text-sm font-bold rounded-xl transition-all ${activeTab === 'PRE' ? 'bg-blue-600 text-white shadow' : 'text-slate-600 hover:bg-slate-50'}`}
           >
-            {saving ? (
-              <>
-                <Loader2 className="w-5 h-5 animate-spin" /> Salvando...
-              </>
-            ) : (
-              <>
-                <Save className="w-5 h-5" /> Salvar Alterações
-              </>
-            )}
+            1. Antes do Cadastro
+          </button>
+          <button 
+            type="button"
+            onClick={() => setActiveTab('FORM')}
+            className={`flex-1 py-2.5 text-sm font-bold rounded-xl transition-all ${activeTab === 'FORM' ? 'bg-blue-600 text-white shadow' : 'text-slate-600 hover:bg-slate-50'}`}
+          >
+            2. Formulário
+          </button>
+          <button 
+            type="button"
+            onClick={() => setActiveTab('POST')}
+            className={`flex-1 py-2.5 text-sm font-bold rounded-xl transition-all ${activeTab === 'POST' ? 'bg-blue-600 text-white shadow' : 'text-slate-600 hover:bg-slate-50'}`}
+          >
+            3. Depois do Cadastro
           </button>
         </div>
-      </form>
+
+        <form onSubmit={handleSubmit} className="space-y-6">
+          
+          {/* ========================================================= */}
+          {/* TAB 1: ANTES DO CADASTRO */}
+          {/* ========================================================= */}
+          <div className={activeTab === 'PRE' ? 'space-y-6 block' : 'hidden'}>
+            
+            {/* ENABLE/DISABLE PRE-SIGNUP */}
+            <div className="bg-white rounded-2xl border border-slate-200/80 p-6 shadow-xs flex items-center justify-between">
+              <div>
+                <h2 className="text-base font-bold text-slate-900 flex items-center gap-2">
+                  <LayoutTemplate className="w-5 h-5 text-blue-600" />
+                  Tela de "Antes do Cadastro"
+                </h2>
+                <p className="text-xs text-slate-500 mt-1">
+                  Se desativada, o visitante cairá direto no formulário de cadastro.
+                </p>
+              </div>
+              <label className="relative inline-flex items-center cursor-pointer">
+                <input type="checkbox" className="sr-only peer" checked={settings.pre_signup_enabled} onChange={(e) => setSettings({...settings, pre_signup_enabled: e.target.checked})} />
+                <div className="w-11 h-6 bg-slate-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-slate-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-600"></div>
+              </label>
+            </div>
+
+            {settings.pre_signup_enabled && (
+              <>
+                {/* DADOS DA MARCA E CORES GERAIS */}
+                <div className="bg-white rounded-2xl border border-slate-200/80 p-6 shadow-xs space-y-4">
+                  <h2 className="text-base font-bold text-slate-900 flex items-center gap-2 border-b border-slate-100 pb-3">
+                    <Palette className="w-5 h-5 text-blue-600" />
+                    Identidade Visual (Geral)
+                  </h2>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div>
+                      <label className="block text-xs font-semibold uppercase tracking-wider text-slate-600 mb-1">Nome da Loja</label>
+                      <input type="text" required value={settings.store_name} onChange={(e) => setSettings({ ...settings, store_name: e.target.value })} className="w-full px-4 py-2.5 rounded-xl border border-slate-200 text-sm focus:ring-2 focus:ring-blue-500/30" />
+                    </div>
+                    <div>
+                      <label className="block text-xs font-semibold uppercase tracking-wider text-slate-600 mb-1">Cor Primária</label>
+                      <div className="flex items-center gap-3">
+                        <input type="color" value={settings.primary_color || '#2563eb'} onChange={(e) => setSettings({ ...settings, primary_color: e.target.value })} className="w-10 h-10 rounded-xl border border-slate-200 cursor-pointer p-0.5" />
+                        <input type="text" value={settings.primary_color || '#2563eb'} onChange={(e) => setSettings({ ...settings, primary_color: e.target.value })} className="w-full px-4 py-2.5 rounded-xl border border-slate-200 text-sm font-mono focus:ring-2 focus:ring-blue-500/30" />
+                      </div>
+                    </div>
+                    <div>
+                      <label className="block text-xs font-semibold uppercase tracking-wider text-slate-600 mb-1">URL da Logo</label>
+                      <input type="text" value={settings.logo_url || ''} onChange={(e) => setSettings({ ...settings, logo_url: e.target.value })} className="w-full px-4 py-2.5 rounded-xl border border-slate-200 text-sm focus:ring-2 focus:ring-blue-500/30" />
+                    </div>
+                    <div>
+                      <label className="block text-xs font-semibold uppercase tracking-wider text-slate-600 mb-1">Imagem de Fundo (Wallpaper)</label>
+                      <input type="text" value={settings.background_url || ''} onChange={(e) => setSettings({ ...settings, background_url: e.target.value })} className="w-full px-4 py-2.5 rounded-xl border border-slate-200 text-sm focus:ring-2 focus:ring-blue-500/30" />
+                    </div>
+                  </div>
+                </div>
+
+                {/* TEMAS PRONTOS */}
+                <div className="bg-white rounded-2xl border border-slate-200/80 p-6 shadow-xs space-y-4">
+                  <h2 className="text-base font-bold text-slate-900 flex items-center gap-2 border-b border-slate-100 pb-3">
+                    <Sparkles className="w-5 h-5 text-amber-500" />
+                    Temas Prontos
+                  </h2>
+                  <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+                    {Object.values(THEME_PRESETS).map((preset) => {
+                      const isSelected = settings.preset_theme === preset.id;
+                      return (
+                        <button type="button" key={preset.id} onClick={() => handleThemeSelect(preset.id)} className={`p-3 rounded-2xl border text-left transition-all ${isSelected ? 'border-blue-600 bg-blue-50/40 ring-2 ring-blue-500/30' : 'border-slate-200 hover:border-slate-300 bg-slate-50/50'}`}>
+                          <div className="flex items-center justify-between mb-2">
+                            <div className="w-4 h-4 rounded-full border border-white/50 shadow-xs" style={{ backgroundColor: preset.primaryColor }} />
+                            {isSelected && <Check className="w-4 h-4 text-blue-600" />}
+                          </div>
+                          <span className="text-xs font-extrabold text-slate-900 leading-tight">{preset.name}</span>
+                        </button>
+                      );
+                    })}
+                  </div>
+                </div>
+
+                {/* MÍDIA E CONTEÚDO PRÉ */}
+                <div className="bg-white rounded-2xl border border-slate-200/80 p-6 shadow-xs space-y-4">
+                  <h2 className="text-base font-bold text-slate-900 flex items-center gap-2 border-b border-slate-100 pb-3">
+                    <Video className="w-5 h-5 text-purple-600" />
+                    Conteúdo da Tela Inicial
+                  </h2>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div>
+                      <label className="block text-xs font-semibold uppercase text-slate-600 mb-1">Mostrar Imagem/Vídeo?</label>
+                      <select value={settings.pre_signup_show_banner ? 'true' : 'false'} onChange={(e) => setSettings({...settings, pre_signup_show_banner: e.target.value === 'true'})} className="w-full px-4 py-2.5 rounded-xl border border-slate-200 text-sm font-semibold">
+                        <option value="true">Sim, exibir banner</option>
+                        <option value="false">Não, ocultar banner</option>
+                      </select>
+                    </div>
+                    {settings.pre_signup_show_banner && (
+                      <>
+                        <div>
+                          <label className="block text-xs font-semibold uppercase tracking-wider text-slate-600 mb-1">Tipo de Mídia</label>
+                          <select value={settings.landing_media_type || 'IMAGE'} onChange={(e) => setSettings({ ...settings, landing_media_type: e.target.value as 'IMAGE' | 'VIDEO' })} className="w-full px-4 py-2.5 rounded-xl border border-slate-200 text-sm focus:ring-2 font-semibold">
+                            <option value="IMAGE">Imagem</option>
+                            <option value="VIDEO">Vídeo (YouTube/Vimeo Embed)</option>
+                          </select>
+                        </div>
+                        <div className="md:col-span-2">
+                          <label className="block text-xs font-semibold uppercase tracking-wider text-slate-600 mb-1">URL da Mídia</label>
+                          <input type="text" value={settings.landing_media_url || ''} onChange={(e) => setSettings({ ...settings, landing_media_url: e.target.value })} className="w-full px-4 py-2.5 rounded-xl border border-slate-200 text-sm focus:ring-2" placeholder="https://" />
+                        </div>
+                      </>
+                    )}
+
+                    <div className="md:col-span-2 mt-4">
+                      <label className="block text-xs font-semibold uppercase text-slate-600 mb-1">Mostrar Textos de Promoção/Oferta?</label>
+                      <select value={settings.pre_signup_show_promo ? 'true' : 'false'} onChange={(e) => setSettings({...settings, pre_signup_show_promo: e.target.value === 'true'})} className="w-full px-4 py-2.5 rounded-xl border border-slate-200 text-sm font-semibold">
+                        <option value="true">Sim, exibir textos promocionais</option>
+                        <option value="false">Não, ocultar textos</option>
+                      </select>
+                    </div>
+                    
+                    {settings.pre_signup_show_promo && (
+                      <>
+                        <div>
+                          <label className="block text-xs font-semibold uppercase text-slate-600 mb-1">Título da Oferta</label>
+                          <input type="text" value={settings.featured_promo_title || ''} onChange={(e) => setSettings({ ...settings, featured_promo_title: e.target.value })} className="w-full px-4 py-2.5 rounded-xl border border-slate-200 text-sm focus:ring-2" />
+                        </div>
+                        <div>
+                          <label className="block text-xs font-semibold uppercase text-slate-600 mb-1">Descrição Curta</label>
+                          <input type="text" value={settings.featured_promo_description || ''} onChange={(e) => setSettings({ ...settings, featured_promo_description: e.target.value })} className="w-full px-4 py-2.5 rounded-xl border border-slate-200 text-sm focus:ring-2" />
+                        </div>
+                      </>
+                    )}
+                  </div>
+                </div>
+                
+                {/* LINKS EXTERNOS PRE */}
+                <div className="bg-white rounded-2xl border border-slate-200/80 p-6 shadow-xs space-y-4">
+                  <h2 className="text-base font-bold text-slate-900 flex items-center gap-2 border-b border-slate-100 pb-3">
+                    <Share2 className="w-5 h-5 text-indigo-600" />
+                    Botões Secundários
+                  </h2>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div>
+                      <label className="block text-xs font-semibold uppercase text-slate-600 mb-1">Botão Instagram</label>
+                      <div className="flex gap-2">
+                         <select value={settings.pre_signup_show_instagram ? 'true' : 'false'} onChange={(e) => setSettings({...settings, pre_signup_show_instagram: e.target.value === 'true'})} className="w-1/3 px-4 py-2.5 rounded-xl border border-slate-200 text-sm font-semibold">
+                          <option value="true">Exibir</option>
+                          <option value="false">Ocultar</option>
+                        </select>
+                        <input type="text" value={settings.instagram_url || ''} onChange={(e) => setSettings({ ...settings, instagram_url: e.target.value })} className="w-2/3 px-4 py-2.5 rounded-xl border border-slate-200 text-sm" placeholder="https://instagram.com/..." />
+                      </div>
+                    </div>
+                    <div>
+                      <label className="block text-xs font-semibold uppercase text-slate-600 mb-1">Botão Cardápio Digital</label>
+                      <div className="flex gap-2">
+                         <select value={settings.pre_signup_show_menu ? 'true' : 'false'} onChange={(e) => setSettings({...settings, pre_signup_show_menu: e.target.value === 'true'})} className="w-1/3 px-4 py-2.5 rounded-xl border border-slate-200 text-sm font-semibold">
+                          <option value="true">Exibir</option>
+                          <option value="false">Ocultar</option>
+                        </select>
+                        <input type="text" value={settings.menu_url || ''} onChange={(e) => setSettings({ ...settings, menu_url: e.target.value })} className="w-2/3 px-4 py-2.5 rounded-xl border border-slate-200 text-sm" placeholder="URL do cardápio" />
+                      </div>
+                    </div>
+                    <div className="md:col-span-2">
+                      <label className="block text-xs font-semibold uppercase text-slate-600 mb-1">Botão Google Meu Negócio</label>
+                      <div className="flex gap-2">
+                         <select value={settings.pre_signup_show_google_review ? 'true' : 'false'} onChange={(e) => setSettings({...settings, pre_signup_show_google_review: e.target.value === 'true'})} className="w-[30%] px-4 py-2.5 rounded-xl border border-slate-200 text-sm font-semibold">
+                          <option value="true">Exibir</option>
+                          <option value="false">Ocultar</option>
+                        </select>
+                        <input type="text" value={settings.google_review_url || ''} onChange={(e) => setSettings({ ...settings, google_review_url: e.target.value })} className="w-[70%] px-4 py-2.5 rounded-xl border border-slate-200 text-sm" placeholder="URL para avaliação do Google" />
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </>
+            )}
+          </div>
+
+          {/* ========================================================= */}
+          {/* TAB 2: FORMULÁRIO DE CADASTRO */}
+          {/* ========================================================= */}
+          <div className={activeTab === 'FORM' ? 'space-y-6 block' : 'hidden'}>
+            <div className="bg-white rounded-2xl border border-slate-200/80 p-6 shadow-xs space-y-4">
+              <div className="border-b border-slate-100 pb-3">
+                <h2 className="text-base font-bold text-slate-900 flex items-center gap-2">
+                  <UserCheck className="w-5 h-5 text-emerald-600" />
+                  Campos do Cadastro
+                </h2>
+                <p className="text-xs text-slate-500 mt-1">Nome e WhatsApp são obrigatórios por padrão.</p>
+              </div>
+
+              {['email', 'dob', 'city', 'gender'].map((field) => {
+                const labelMap: Record<string, string> = { email: 'E-mail', dob: 'Data de Nascimento', city: 'Cidade', gender: 'Gênero' };
+                const enabledKey = `field_${field}_enabled` as keyof StoreSettings;
+                const requiredKey = `field_${field}_required` as keyof StoreSettings;
+                
+                return (
+                  <div key={field} className="p-4 bg-slate-50 rounded-2xl border border-slate-200/60 flex items-center justify-between">
+                    <div>
+                      <span className="text-sm font-bold text-slate-900 block">{labelMap[field]}</span>
+                    </div>
+                    <div className="flex items-center gap-3">
+                      <label className="flex items-center gap-1.5 cursor-pointer text-xs font-semibold">
+                        <input type="checkbox" checked={!!settings[enabledKey]} onChange={(e) => setSettings({ ...settings, [enabledKey]: e.target.checked, [requiredKey]: e.target.checked ? settings[requiredKey] : false } as any)} className="w-4 h-4 text-blue-600 rounded" />
+                        Ativado
+                      </label>
+                      {settings[enabledKey] && (
+                        <label className="flex items-center gap-1.5 cursor-pointer text-xs text-rose-600 font-semibold">
+                          <input type="checkbox" checked={!!settings[requiredKey]} onChange={(e) => setSettings({ ...settings, [requiredKey]: e.target.checked } as any)} className="w-4 h-4 text-rose-600 rounded" />
+                          Obrigatório
+                        </label>
+                      )}
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+            
+            <div className="bg-white rounded-2xl border border-slate-200/80 p-6 shadow-xs space-y-4">
+               <h2 className="text-base font-bold text-slate-900 flex items-center gap-2 border-b border-slate-100 pb-3">
+                  Mensagem de Boas Vindas e Termos
+               </h2>
+               <div>
+                  <label className="block text-xs font-semibold uppercase text-slate-600 mb-1">Título do Formulário</label>
+                  <input type="text" value={settings.welcome_message || ''} onChange={(e) => setSettings({ ...settings, welcome_message: e.target.value })} className="w-full px-4 py-2.5 rounded-xl border border-slate-200 text-sm" />
+               </div>
+               <div className="grid grid-cols-2 gap-4 mt-4">
+                  <div>
+                    <label className="block text-xs font-semibold uppercase text-slate-600 mb-1">Re-cadastro após (Dias)</label>
+                    <select value={settings.relogin_days_interval || 7} onChange={(e) => setSettings({ ...settings, relogin_days_interval: parseInt(e.target.value) })} className="w-full px-4 py-2.5 rounded-xl border border-slate-200 text-sm font-semibold">
+                      <option value={7}>7 dias</option>
+                      <option value={15}>15 dias</option>
+                      <option value={30}>30 dias</option>
+                    </select>
+                  </div>
+               </div>
+            </div>
+          </div>
+
+          {/* ========================================================= */}
+          {/* TAB 3: DEPOIS DO CADASTRO */}
+          {/* ========================================================= */}
+          <div className={activeTab === 'POST' ? 'space-y-6 block' : 'hidden'}>
+            
+            <div className="bg-white rounded-2xl border border-slate-200/80 p-6 shadow-xs space-y-4">
+              <h2 className="text-base font-bold text-slate-900 flex items-center gap-2 border-b border-slate-100 pb-3">
+                <LinkIcon className="w-5 h-5 text-green-600" />
+                Ação Principal após Cadastro
+              </h2>
+              <div className="space-y-4">
+                <div>
+                  <label className="block text-xs font-semibold uppercase text-slate-600 mb-1">O que a tela de Sucesso deve destacar?</label>
+                  <select value={settings.post_signup_action || 'SHOW_MESSAGE'} onChange={(e) => setSettings({ ...settings, post_signup_action: e.target.value as StoreSettings['post_signup_action'] })} className="w-full px-4 py-2.5 rounded-xl border border-slate-200 text-sm font-semibold">
+                    <option value="SHOW_MESSAGE">Apenas Mensagem e Botão "Navegar"</option>
+                    <option value="COUPON">Cupom de Desconto</option>
+                    <option value="PROMO">Promoção/Banner já configurado</option>
+                    <option value="MENU">Botão Gigante para Cardápio</option>
+                    <option value="INSTAGRAM">Botão Gigante para Instagram</option>
+                    <option value="GOOGLE">Botão Gigante para Avaliar no Google</option>
+                    <option value="CUSTOM_URL">Redirecionar para URL Customizada</option>
+                  </select>
+                </div>
+
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-xs font-semibold uppercase text-slate-600 mb-1">Título de Sucesso</label>
+                    <input type="text" value={settings.post_signup_title || ''} onChange={(e) => setSettings({ ...settings, post_signup_title: e.target.value })} className="w-full px-4 py-2.5 rounded-xl border border-slate-200 text-sm" placeholder="Ex: Tudo Certo!" />
+                  </div>
+                  <div>
+                    <label className="block text-xs font-semibold uppercase text-slate-600 mb-1">Mensagem de Sucesso</label>
+                    <input type="text" value={settings.post_signup_message || ''} onChange={(e) => setSettings({ ...settings, post_signup_message: e.target.value })} className="w-full px-4 py-2.5 rounded-xl border border-slate-200 text-sm" placeholder="Sua internet está liberada." />
+                  </div>
+                </div>
+
+                {settings.post_signup_action === 'COUPON' && (
+                  <div>
+                    <label className="block text-xs font-semibold uppercase text-slate-600 mb-1">Código do Cupom</label>
+                    <input type="text" value={settings.promo_coupon_code || ''} onChange={(e) => setSettings({ ...settings, promo_coupon_code: e.target.value })} className="w-full px-4 py-2.5 rounded-xl border border-slate-200 font-mono text-sm uppercase text-emerald-600 font-bold bg-emerald-50" placeholder="DESCONTO10" />
+                  </div>
+                )}
+                
+                {settings.post_signup_action === 'CUSTOM_URL' && (
+                  <div>
+                    <label className="block text-xs font-semibold uppercase text-slate-600 mb-1">URL Personalizada</label>
+                    <input type="url" value={settings.post_signup_url || ''} onChange={(e) => setSettings({ ...settings, post_signup_url: e.target.value })} className="w-full px-4 py-2.5 rounded-xl border border-slate-200 text-sm" placeholder="https://" />
+                  </div>
+                )}
+              </div>
+            </div>
+            
+            <div className="bg-white rounded-2xl border border-slate-200/80 p-6 shadow-xs space-y-4">
+              <h2 className="text-base font-bold text-slate-900 flex items-center gap-2 border-b border-slate-100 pb-3">
+                <Share2 className="w-5 h-5 text-indigo-600" />
+                Redirecionamento e Botões Extras
+              </h2>
+              
+              <div>
+                <label className="block text-xs font-semibold uppercase text-slate-600 mb-1">Automação de Redirecionamento (Marketing)</label>
+                <select value={settings.post_signup_redirect_mode || 'NONE'} onChange={(e) => setSettings({ ...settings, post_signup_redirect_mode: e.target.value as StoreSettings['post_signup_redirect_mode'] })} className="w-full px-4 py-2.5 rounded-xl border border-slate-200 text-sm font-semibold mb-2">
+                  <option value="NONE">Não redirecionar automaticamente (apenas pelo botão)</option>
+                  <option value="AUTO_3S">Redirecionar após 3 segundos</option>
+                  <option value="AUTO_5S">Redirecionar após 5 segundos</option>
+                  <option value="AUTO_10S">Redirecionar após 10 segundos</option>
+                </select>
+                <p className="text-[11px] text-slate-500 italic">Nota: A autorização do roteador (OpenNDS) ocorrerá silenciosamente no fundo. O redirecionamento será apenas para a URL destino do marketing selecionado acima.</p>
+              </div>
+
+              <div className="mt-4 pt-4 border-t border-slate-100">
+                 <p className="text-xs font-semibold uppercase text-slate-600 mb-3">Botões de Apoio na Tela de Sucesso</p>
+                 <div className="space-y-3">
+                    <label className="flex items-center gap-2 cursor-pointer text-sm font-medium">
+                      <input type="checkbox" checked={settings.post_signup_show_instagram} onChange={(e) => setSettings({ ...settings, post_signup_show_instagram: e.target.checked })} className="w-4 h-4 rounded border-slate-300 text-blue-600" /> Mostrar botão do Instagram (se preenchido acima)
+                    </label>
+                    <label className="flex items-center gap-2 cursor-pointer text-sm font-medium">
+                      <input type="checkbox" checked={settings.post_signup_show_menu} onChange={(e) => setSettings({ ...settings, post_signup_show_menu: e.target.checked })} className="w-4 h-4 rounded border-slate-300 text-blue-600" /> Mostrar botão do Cardápio (se preenchido acima)
+                    </label>
+                    <label className="flex items-center gap-2 cursor-pointer text-sm font-medium">
+                      <input type="checkbox" checked={settings.post_signup_show_google_review} onChange={(e) => setSettings({ ...settings, post_signup_show_google_review: e.target.checked })} className="w-4 h-4 rounded border-slate-300 text-blue-600" /> Mostrar botão de Avaliação Google (se preenchido acima)
+                    </label>
+                 </div>
+              </div>
+            </div>
+
+          </div>
+
+          {/* Botão de Salvar Global */}
+          <div className="flex justify-end sticky bottom-6 z-50">
+            <button
+              type="submit"
+              disabled={saving}
+              className="px-8 py-4 bg-blue-600 hover:bg-blue-500 text-white font-bold text-base rounded-2xl shadow-xl shadow-blue-600/30 transition-all flex items-center gap-2 w-full sm:w-auto"
+            >
+              {saving ? (
+                <>
+                  <Loader2 className="w-5 h-5 animate-spin" /> Salvando e Validando...
+                </>
+              ) : (
+                <>
+                  <Save className="w-5 h-5" /> Salvar Toda a Jornada
+                </>
+              )}
+            </button>
+          </div>
+        </form>
+      </div>
+
+      {/* LADO DIREITO: PREVIEW MOBILE EM TEMPO REAL */}
+      <div className="hidden xl:block w-[400px] shrink-0">
+        <div className="sticky top-6">
+          <div className="flex items-center justify-between mb-4">
+             <h3 className="text-sm font-bold text-slate-400 uppercase tracking-wider flex items-center gap-2">
+               <Smartphone className="w-4 h-4" /> Prévia em Tempo Real
+             </h3>
+          </div>
+          
+          <div className="w-[375px] h-[812px] bg-black rounded-[3.5rem] p-3 shadow-2xl border-[6px] border-slate-800 relative ring-4 ring-slate-900/50 mx-auto">
+            {/* Notch */}
+            <div className="absolute top-3 left-1/2 -translate-x-1/2 w-32 h-7 bg-black rounded-b-3xl z-50 flex justify-center items-center">
+               <div className="w-16 h-4 bg-slate-900 rounded-full"></div>
+            </div>
+            
+            {/* Screen */}
+            <div className="w-full h-full bg-white rounded-[2.5rem] overflow-hidden relative overflow-y-auto custom-scrollbar">
+               <PreviewMobile settings={settings} step={activeTab} />
+            </div>
+          </div>
+        </div>
+      </div>
+      
     </div>
   );
 }

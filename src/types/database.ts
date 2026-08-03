@@ -38,6 +38,14 @@ export interface StoreSettings {
   // Tema Pré-configurado por Segmento
   preset_theme?: ThemePreset;
 
+  // Jornada do Visitante: Antes do Cadastro
+  pre_signup_enabled?: boolean;
+  pre_signup_show_banner?: boolean;
+  pre_signup_show_promo?: boolean;
+  pre_signup_show_instagram?: boolean;
+  pre_signup_show_menu?: boolean;
+  pre_signup_show_google_review?: boolean;
+
   // Configuração Dinâmica de Captura de Leads
   field_email_enabled?: boolean;
   field_dob_enabled?: boolean;
@@ -47,6 +55,18 @@ export interface StoreSettings {
   field_dob_required?: boolean;
   field_city_required?: boolean;
   field_gender_required?: boolean;
+
+  // Jornada do Visitante: Depois do Cadastro
+  post_signup_action?: 'COUPON' | 'PROMO' | 'MENU' | 'INSTAGRAM' | 'GOOGLE' | 'CUSTOM_URL' | 'SHOW_MESSAGE';
+  post_signup_title?: string;
+  post_signup_message?: string;
+  post_signup_url?: string;
+  post_signup_redirect_mode?: 'NONE' | 'AUTO_3S' | 'AUTO_5S' | 'AUTO_10S' | 'ON_CLICK';
+  post_signup_redirect_seconds?: number;
+  post_signup_show_coupon?: boolean;
+  post_signup_show_instagram?: boolean;
+  post_signup_show_menu?: boolean;
+  post_signup_show_google_review?: boolean;
 
   // Regras de Recadastro e Termos
   relogin_days_interval: number;
