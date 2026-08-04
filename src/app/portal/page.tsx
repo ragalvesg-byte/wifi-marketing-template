@@ -6,7 +6,7 @@ import { VisitorForm } from '@/components/portal/visitor-form';
 import { ReturningVisitor } from '@/components/portal/returning-visitor';
 import { SuccessOffer } from '@/components/portal/success-offer';
 import { parseOpenNdsParams } from '@/lib/opennds';
-import { MOCK_STORE_SETTINGS } from '@/lib/supabase/mock-data';
+import { MOCK_STORE_SETTINGS, NEUTRAL_STORE_SETTINGS } from '@/lib/supabase/mock-data';
 import { StoreSettings, OpenNdsParams, Visitor } from '@/types/database';
 import { Loader2 } from 'lucide-react';
 
@@ -17,7 +17,7 @@ interface PortalPageProps {
 export default function PortalPage({ searchParams }: PortalPageProps) {
   const resolvedParams = use(searchParams);
   const [openNdsParams, setOpenNdsParams] = useState<OpenNdsParams>({});
-  const [settings, setSettings] = useState<StoreSettings>(MOCK_STORE_SETTINGS);
+  const [settings, setSettings] = useState<StoreSettings>(NEUTRAL_STORE_SETTINGS);
   const [knownVisitor, setKnownVisitor] = useState<Visitor | null>(null);
   const [checkingMac, setCheckingMac] = useState(true);
 
@@ -39,7 +39,7 @@ export default function PortalPage({ searchParams }: PortalPageProps) {
 
     const checkDeviceAndSettings = async () => {
       setCheckingMac(true);
-      let loadedSettings = MOCK_STORE_SETTINGS;
+      let loadedSettings = NEUTRAL_STORE_SETTINGS;
 
       // 1. Buscar configurações reais da loja
       try {
@@ -50,9 +50,11 @@ export default function PortalPage({ searchParams }: PortalPageProps) {
             loadedSettings = settingsData.settings;
             setSettings(loadedSettings);
           }
+        } else {
+          console.error('API de configurações do portal retornou status de erro:', settingsRes.status);
         }
-      } catch {
-        // Ignorado, mantém MOCK_STORE_SETTINGS
+      } catch (err) {
+        console.error('Falha de conexão ao buscar configurações do portal:', err);
       }
 
       // 2. Verificar se o visitante é conhecido pelo MAC ou Cookie

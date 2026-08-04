@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
 import { createServerClientInstance } from '@/lib/supabase/server';
-import { MOCK_STORE_SETTINGS } from '@/lib/supabase/mock-data';
+import { MOCK_STORE_SETTINGS, NEUTRAL_STORE_SETTINGS } from '@/lib/supabase/mock-data';
 import { StoreSettings } from '@/types/database';
 
 function validateUrl(url?: string): string | undefined {
@@ -26,18 +26,24 @@ export async function GET() {
   }
 
   try {
-    const { data: settings } = await supabase
+    const { data: settings, error } = await supabase
       .from('store_settings')
       .select('*')
       .limit(1)
       .single();
 
+    if (error) {
+      console.error('Erro ao buscar configurações do admin no banco:', error);
+      return NextResponse.json({ settings: NEUTRAL_STORE_SETTINGS, isDemo: false });
+    }
+
     return NextResponse.json({
-      settings: settings || MOCK_STORE_SETTINGS,
+      settings: settings || NEUTRAL_STORE_SETTINGS,
       isDemo: false,
     });
-  } catch {
-    return NextResponse.json({ settings: MOCK_STORE_SETTINGS, isDemo: false });
+  } catch (err) {
+    console.error('Falha de conexão ao buscar configurações do admin:', err);
+    return NextResponse.json({ settings: NEUTRAL_STORE_SETTINGS, isDemo: false });
   }
 }
 

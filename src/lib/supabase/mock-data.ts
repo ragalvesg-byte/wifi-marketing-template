@@ -40,6 +40,46 @@ export const MOCK_STORE_SETTINGS: StoreSettings = {
   updated_at: new Date().toISOString(),
 };
 
+export const NEUTRAL_STORE_SETTINGS: StoreSettings = {
+  id: "neutral-settings",
+  store_name: "Portal Wi-Fi",
+  logo_url: "",
+  background_url: "",
+  primary_color: "#2563eb",
+  welcome_message: "Conecte-se ao Wi-Fi grátis",
+  post_connect_message: "Sua internet foi liberada com sucesso!",
+  promo_coupon_code: "",
+  promo_image_url: "",
+  
+  landing_media_type: "IMAGE",
+  landing_media_url: "",
+  featured_promo_title: "",
+  featured_promo_description: "",
+
+  instagram_url: "",
+  facebook_url: "",
+  menu_url: "",
+  google_review_url: "",
+  google_review_timing: "POST_CONNECT",
+
+  preset_theme: "CUSTOM",
+
+  field_email_enabled: false,
+  field_dob_enabled: false,
+  field_city_enabled: false,
+  field_gender_enabled: false,
+  field_email_required: false,
+  field_dob_required: false,
+  field_city_required: false,
+  field_gender_required: false,
+
+  relogin_days_interval: 7,
+  terms_of_service: "Ao se conectar a este serviço de Wi-Fi, você aceita os termos e condições padrão de uso correto da internet.",
+  privacy_policy: "Garantimos a total proteção dos seus dados pessoais em conformidade com a LGPD.",
+  created_at: new Date().toISOString(),
+  updated_at: new Date().toISOString(),
+};
+
 export const MOCK_VISITORS: Visitor[] = [
   {
     id: "v-001",
