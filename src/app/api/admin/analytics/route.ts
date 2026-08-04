@@ -174,7 +174,7 @@ export async function GET(request: Request) {
       .filter(e => e.event_type === 'CAMPAIGN_VIEWED')
       .forEach(e => {
         const sessionKey = e.wifi_session_id || 'no-session';
-        const key = `${e.campaign_id}-${sessionKey}`;
+        const key = `${e.campaign_id}::${sessionKey}`;
         if (!campaignViewsSet.has(key)) {
           campaignViewsSet.add(key);
           campaignViewsCount++;
@@ -188,7 +188,7 @@ export async function GET(request: Request) {
       .filter(e => e.event_type === 'CAMPAIGN_CLICKED')
       .forEach(e => {
         const sessionKey = e.wifi_session_id || 'no-session';
-        const key = `${e.campaign_id}-${sessionKey}`;
+        const key = `${e.campaign_id}::${sessionKey}`;
         if (!campaignClicksSet.has(key)) {
           campaignClicksSet.add(key);
           campaignClicksCount++;
@@ -217,7 +217,7 @@ export async function GET(request: Request) {
     
     // Processa visualizações
     campaignViewsSet.forEach(key => {
-      const campId = key.split('-')[0];
+      const campId = key.split('::')[0];
       const stats = campaignsPerformanceMap.get(campId) || { views: 0, clicks: 0 };
       stats.views++;
       campaignsPerformanceMap.set(campId, stats);
@@ -225,7 +225,7 @@ export async function GET(request: Request) {
 
     // Processa cliques
     campaignClicksSet.forEach(key => {
-      const campId = key.split('-')[0];
+      const campId = key.split('::')[0];
       const stats = campaignsPerformanceMap.get(campId) || { views: 0, clicks: 0 };
       stats.clicks++;
       campaignsPerformanceMap.set(campId, stats);
