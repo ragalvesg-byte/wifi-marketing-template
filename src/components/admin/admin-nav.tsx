@@ -4,6 +4,7 @@ import React from 'react';
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
 import { LayoutDashboard, Users, Settings, LogOut, Wifi, AlertTriangle } from 'lucide-react';
+import { createClient } from '@/lib/supabase/client';
 
 interface AdminNavProps {
   storeName?: string;
@@ -14,7 +15,11 @@ export function AdminNav({ storeName = 'Café & Bistro Central', isDemo = true }
   const pathname = usePathname();
   const router = useRouter();
 
-  const handleLogout = () => {
+  const handleLogout = async () => {
+    const supabase = createClient();
+    if (supabase) {
+      await supabase.auth.signOut();
+    }
     router.push('/admin/login');
   };
 

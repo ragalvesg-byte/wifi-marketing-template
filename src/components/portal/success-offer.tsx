@@ -87,6 +87,11 @@ export function SuccessOffer({ settings, visitorName, authUrl, openNdsParams }: 
     return () => clearInterval(timer);
   }, [timeLeft]);
 
+  const isValidUrl = (url?: string | null): boolean => {
+    if (!url) return false;
+    return url.startsWith('http://') || url.startsWith('https://');
+  };
+
   const getRedirectUrl = () => {
     switch (settings.post_signup_action) {
       case 'INSTAGRAM': return settings.instagram_url;
@@ -101,8 +106,10 @@ export function SuccessOffer({ settings, visitorName, authUrl, openNdsParams }: 
 
   const handleMarketingRedirect = () => {
     const url = getRedirectUrl();
-    if (url && typeof window !== 'undefined') {
-      window.location.href = url;
+    if (isValidUrl(url) && typeof window !== 'undefined') {
+      window.location.href = url!;
+    } else if (isValidUrl(openNdsParams.redir) && typeof window !== 'undefined') {
+      window.location.href = openNdsParams.redir!;
     }
   };
 

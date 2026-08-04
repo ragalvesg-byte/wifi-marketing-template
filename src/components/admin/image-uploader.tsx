@@ -74,6 +74,7 @@ export function ImageUploader({ value, onChange, folder = 'general', label = 'Im
 
   const handleRemove = () => {
     onChange('');
+    setError(null);
   };
 
   return (
@@ -135,7 +136,10 @@ export function ImageUploader({ value, onChange, folder = 'general', label = 'Im
 
           <button 
             type="button" 
-            onClick={() => setIsAdvanced(true)} 
+            onClick={() => {
+              setIsAdvanced(true);
+              setError(null);
+            }} 
             className="text-[10px] text-slate-400 hover:text-slate-600 underline font-medium"
           >
             Usar URL externa em vez de upload
@@ -154,7 +158,10 @@ export function ImageUploader({ value, onChange, folder = 'general', label = 'Im
           </div>
           <button 
             type="button" 
-            onClick={() => setIsAdvanced(false)} 
+            onClick={() => {
+              setIsAdvanced(false);
+              setError(null);
+            }} 
             className="text-[10px] text-slate-400 hover:text-slate-600 underline font-medium flex items-center gap-1"
           >
             <ImageIcon className="w-3 h-3" /> Voltar para o Upload Seguro
