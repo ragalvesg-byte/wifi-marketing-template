@@ -4,7 +4,8 @@ import React, { useState, useEffect } from 'react';
 import { 
   Megaphone, Tag, Users, Trash2, Plus, 
   Loader2, AlertCircle, CheckCircle, Percent, 
-  Image, Calendar, Eye, ExternalLink, RefreshCw 
+  Image, Calendar, Eye, ExternalLink, RefreshCw,
+  Play, Pause, Copy, Pencil
 } from 'lucide-react';
 import { Campaign } from '@/types/database';
 
@@ -15,6 +16,7 @@ export function CampaignsManager() {
   const [submitting, setSubmitting] = useState(false);
   const [errorMsg, setErrorMsg] = useState('');
   const [successMsg, setSuccessMsg] = useState('');
+  const [editingCampaignId, setEditingCampaignId] = useState<string | null>(null);
 
   // Form State
   const [title, setTitle] = useState('');
@@ -40,6 +42,151 @@ export function CampaignsManager() {
   const [discountValue, setDiscountValue] = useState(10);
   const [maxRedemptions, setMaxRedemptions] = useState('');
   const [couponExpiresAt, setCouponExpiresAt] = useState('');
+
+  const handleEditClick = (campaign: any) => {
+    setEditingCampaignId(campaign.id);
+    setTitle(campaign.title || '');
+    setDescription(campaign.description || '');
+    setType(campaign.type || 'COUPON');
+    setStatus(campaign.status || 'ACTIVE');
+    setMediaUrl(campaign.media_url || '');
+    setMediaType(campaign.media_type || 'IMAGE');
+    setAspectRatio(campaign.aspect_ratio || '4:5');
+    setButtonText(campaign.button_text || '');
+    setButtonUrl(campaign.button_url || '');
+    
+    const formatDate = (isoStr?: string) => {
+      if (!isoStr) return '';
+      return isoStr.substring(0, 16);
+    };
+    setStartDate(formatDate(campaign.start_date));
+    setEndDate(formatDate(campaign.end_date));
+
+    const audience = campaign.campaign_audiences?.[0];
+    if (audience) {
+      setTargetType(audience.target_type || 'ALL');
+      if (audience.target_type === 'GENDER') {
+        setGenderRule(audience.rules?.gender || 'Feminino');
+      } else if (audience.target_type === 'BIRTHDAY_MONTH') {
+        setBirthdayMonthRule(String(audience.rules?.birthday_month || '8'));
+      }
+    } else {
+      setTargetType('ALL');
+    }
+
+    const coupon = campaign.coupons?.[0];
+    if (coupon) {
+      setCouponCode(coupon.code || '');
+      setDiscountType(coupon.discount_type || 'PERCENTAGE');
+      setDiscountValue(coupon.discount_value || 0);
+      setMaxRedemptions(coupon.max_redemptions ? String(coupon.max_redemptions) : '');
+      setCouponExpiresAt(coupon.expires_at ? coupon.expires_at.substring(0, 10) : '');
+    } else {
+      setCouponCode('');
+      setDiscountType('PERCENTAGE');
+      setDiscountValue(10);
+      setMaxRedemptions('');
+      setCouponExpiresAt('');
+    }
+
+    setActiveTab('CREATE');
+  };
+
+  const handleToggleStatus = async (campaign: any) => {
+    const newStatus = campaign.status === 'ACTIVE' ? 'PAUSED' : 'ACTIVE';
+    try {
+      const audience = campaign.campaign_audiences?.[0];
+      const coupon = campaign.coupons?.[0];
+      const rules = audience?.rules || {};
+      
+      const payload = {
+        id: campaign.id,
+        title: campaign.title,
+        description: campaign.description,
+        type: campaign.type,
+        status: newStatus,
+        media_url: campaign.media_url,
+        media_type: campaign.media_type,
+        aspect_ratio: campaign.aspect_ratio,
+        button_text: campaign.button_text,
+        button_url: campaign.button_url,
+        start_date: campaign.start_date,
+        end_date: campaign.end_date,
+        target_type: audience?.target_type || 'ALL',
+        rules,
+        coupon_code: coupon?.code || null,
+        discount_type: coupon?.discount_type || 'PERCENTAGE',
+        discount_value: coupon?.discount_value || 0,
+        max_redemptions: coupon?.max_redemptions || null,
+        expires_at: coupon?.expires_at || null,
+      };
+      
+      const res = await fetch('/api/admin/campaigns', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload),
+      });
+      
+      if (res.ok) {
+        setSuccessMsg(`Campanha ${newStatus === 'ACTIVE' ? 'ativada' : 'pausada'} com sucesso!`);
+        fetchCampaigns();
+        setTimeout(() => setSuccessMsg(''), 3000);
+      } else {
+        const data = await res.json();
+        setErrorMsg(data.error || 'Falha ao alterar status.');
+      }
+    } catch {
+      setErrorMsg('Erro de rede ao alterar status.');
+    }
+  };
+
+  const handleDuplicate = async (campaign: any) => {
+    try {
+      const audience = campaign.campaign_audiences?.[0];
+      const coupon = campaign.coupons?.[0];
+      const rules = audience?.rules || {};
+      
+      const duplicateCouponCode = coupon?.code ? `${coupon.code.substring(0, 10)}_DP${Math.random().toString(36).substring(2, 5).toUpperCase()}` : null;
+
+      const payload = {
+        title: `Cópia de ${campaign.title}`,
+        description: campaign.description,
+        type: campaign.type,
+        status: 'DRAFT',
+        media_url: campaign.media_url,
+        media_type: campaign.media_type,
+        aspect_ratio: campaign.aspect_ratio,
+        button_text: campaign.button_text,
+        button_url: campaign.button_url,
+        start_date: campaign.start_date,
+        end_date: campaign.end_date,
+        target_type: audience?.target_type || 'ALL',
+        rules,
+        coupon_code: duplicateCouponCode,
+        discount_type: coupon?.discount_type || 'PERCENTAGE',
+        discount_value: coupon?.discount_value || 0,
+        max_redemptions: coupon?.max_redemptions || null,
+        expires_at: coupon?.expires_at || null,
+      };
+      
+      const res = await fetch('/api/admin/campaigns', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload),
+      });
+      
+      if (res.ok) {
+        setSuccessMsg('Campanha duplicada como Rascunho com sucesso!');
+        fetchCampaigns();
+        setTimeout(() => setSuccessMsg(''), 3000);
+      } else {
+        const data = await res.json();
+        setErrorMsg(data.error || 'Falha ao duplicar campanha.');
+      }
+    } catch {
+      setErrorMsg('Erro de rede ao duplicar campanha.');
+    }
+  };
 
   const fetchCampaigns = async () => {
     setLoading(true);
@@ -86,6 +233,7 @@ export function CampaignsManager() {
   };
 
   const resetForm = () => {
+    setEditingCampaignId(null);
     setTitle('');
     setDescription('');
     setType('COUPON');
@@ -120,7 +268,12 @@ export function CampaignsManager() {
       rules.birthday_month = birthdayMonthRule;
     }
 
+    const isEditing = !!editingCampaignId;
+    const url = '/api/admin/campaigns';
+    const method = isEditing ? 'PUT' : 'POST';
+
     const payload = {
+      ...(isEditing ? { id: editingCampaignId } : {}),
       title,
       description,
       type,
@@ -142,15 +295,15 @@ export function CampaignsManager() {
     };
 
     try {
-      const res = await fetch('/api/admin/campaigns', {
-        method: 'POST',
+      const res = await fetch(url, {
+        method,
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(payload),
       });
       const data = await res.json();
 
       if (res.ok) {
-        setSuccessMsg('Campanha criada com sucesso!');
+        setSuccessMsg(isEditing ? 'Campanha atualizada com sucesso!' : 'Campanha criada com sucesso!');
         resetForm();
         fetchCampaigns();
         setActiveTab('LIST');
@@ -190,14 +343,19 @@ export function CampaignsManager() {
             Listar Campanhas
           </button>
           <button
-            onClick={() => setActiveTab('CREATE')}
+            onClick={() => {
+              if (activeTab === 'LIST') {
+                resetForm();
+              }
+              setActiveTab('CREATE');
+            }}
             className={`px-4 py-2 rounded-xl text-sm font-bold transition-all flex items-center gap-1.5 ${
               activeTab === 'CREATE'
                 ? 'bg-blue-600 text-white shadow-md'
                 : 'bg-slate-100 hover:bg-slate-200 text-slate-600'
             }`}
           >
-            <Plus className="w-4 h-4" /> Criar Campanha
+            <Plus className="w-4 h-4" /> {editingCampaignId ? 'Editar Campanha' : 'Criar Campanha'}
           </button>
         </div>
       </div>
@@ -318,13 +476,40 @@ export function CampaignsManager() {
                           )}
                         </td>
                         <td className="px-6 py-4 text-right">
-                          <button
-                            onClick={() => handleDelete(campaign.id)}
-                            className="p-2 text-rose-600 hover:bg-rose-50 rounded-lg transition-colors"
-                            title="Excluir campanha"
-                          >
-                            <Trash2 className="w-4 h-4" />
-                          </button>
+                          <div className="flex items-center justify-end gap-1">
+                            <button
+                              onClick={() => handleToggleStatus(campaign)}
+                              className={`p-1.5 rounded-lg border transition-colors ${
+                                campaign.status === 'ACTIVE'
+                                  ? 'text-amber-600 hover:bg-amber-50 border-amber-200'
+                                  : 'text-emerald-600 hover:bg-emerald-50 border-emerald-200'
+                              }`}
+                              title={campaign.status === 'ACTIVE' ? 'Pausar campanha' : 'Ativar campanha'}
+                            >
+                              {campaign.status === 'ACTIVE' ? <Pause className="w-3.5 h-3.5" /> : <Play className="w-3.5 h-3.5" />}
+                            </button>
+                            <button
+                              onClick={() => handleDuplicate(campaign)}
+                              className="p-1.5 text-slate-600 hover:bg-slate-50 border border-slate-200 rounded-lg transition-colors"
+                              title="Duplicar campanha"
+                            >
+                              <Copy className="w-3.5 h-3.5" />
+                            </button>
+                            <button
+                              onClick={() => handleEditClick(campaign)}
+                              className="p-1.5 text-blue-600 hover:bg-blue-50 border border-blue-200 rounded-lg transition-colors"
+                              title="Editar campanha"
+                            >
+                              <Pencil className="w-3.5 h-3.5" />
+                            </button>
+                            <button
+                              onClick={() => handleDelete(campaign.id)}
+                              className="p-1.5 text-rose-600 hover:bg-rose-50 border border-rose-200 rounded-lg transition-colors"
+                              title="Excluir campanha"
+                            >
+                              <Trash2 className="w-3.5 h-3.5" />
+                            </button>
+                          </div>
                         </td>
                       </tr>
                     );

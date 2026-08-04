@@ -66,7 +66,7 @@ describe('SuccessOffer Component', () => {
     );
   });
 
-  it('deve renderizar o modo demonstração corretamente com o banner de aviso', () => {
+  it('deve renderizar o modo demonstração corretamente com o banner de aviso', async () => {
     render(
       <SuccessOffer
         settings={baseSettings}
@@ -76,12 +76,16 @@ describe('SuccessOffer Component', () => {
       />
     );
 
+    await act(async () => {
+      await Promise.resolve();
+    });
+
     expect(screen.getByText(/Modo demonstração/i)).toBeInTheDocument();
     expect(screen.getByText('Sucesso!')).toBeInTheDocument();
     expect(screen.getByText('Sua internet está ativa.')).toBeInTheDocument();
   });
 
-  it('deve exibir o cupom de desconto quando post_signup_action for COUPON', () => {
+  it('deve exibir o cupom de desconto quando post_signup_action for COUPON', async () => {
     const couponSettings = {
       ...baseSettings,
       post_signup_action: 'COUPON' as const,
@@ -96,11 +100,15 @@ describe('SuccessOffer Component', () => {
       />
     );
 
+    await act(async () => {
+      await Promise.resolve();
+    });
+
     expect(screen.getByText('CUPOM DE DESCONTO')).toBeInTheDocument();
     expect(screen.getByText('TESTE10')).toBeInTheDocument();
   });
 
-  it('deve exibir a imagem promocional quando post_signup_action for PROMO', () => {
+  it('deve exibir a imagem promocional quando post_signup_action for PROMO', async () => {
     const promoSettings = {
       ...baseSettings,
       post_signup_action: 'PROMO' as const,
@@ -120,13 +128,17 @@ describe('SuccessOffer Component', () => {
       />
     );
 
+    await act(async () => {
+      await Promise.resolve();
+    });
+
     expect(screen.getByAltText('Promoção')).toBeInTheDocument();
     expect(screen.getByText('Super Promo')).toBeInTheDocument();
     expect(screen.getByText('Ganhe brindes especiais')).toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Quero agora' })).toBeInTheDocument();
   });
 
-  it('deve iniciar o redirecionamento automático quando post_signup_redirect_mode for ativado', () => {
+  it('deve iniciar o redirecionamento automático quando post_signup_redirect_mode for ativado', async () => {
     const redirectSettings = {
       ...baseSettings,
       post_signup_redirect_mode: 'AUTO_3S' as const,
@@ -147,6 +159,10 @@ describe('SuccessOffer Component', () => {
       />
     );
 
+    await act(async () => {
+      await Promise.resolve();
+    });
+
     expect(screen.getByText(/Redirecionando em 3 segundos/i)).toBeInTheDocument();
 
     act(() => {
@@ -163,7 +179,7 @@ describe('SuccessOffer Component', () => {
     window.location = originalLocation;
   });
 
-  it('deve permitir cancelar o redirecionamento automático', () => {
+  it('deve permitir cancelar o redirecionamento automático', async () => {
     const redirectSettings = {
       ...baseSettings,
       post_signup_redirect_mode: 'AUTO_3S' as const,
@@ -179,6 +195,10 @@ describe('SuccessOffer Component', () => {
       />
     );
 
+    await act(async () => {
+      await Promise.resolve();
+    });
+
     expect(screen.getByText(/Redirecionando em 3 segundos/i)).toBeInTheDocument();
 
     const cancelButton = screen.getByRole('button', { name: 'Cancelar' });
@@ -188,7 +208,7 @@ describe('SuccessOffer Component', () => {
     expect(screen.queryByText(/Redirecionando em/i)).not.toBeInTheDocument();
   });
 
-  it('deve renderizar os botões secundários se configurados', () => {
+  it('deve renderizar os botões secundários se configurados', async () => {
     const socialSettings = {
       ...baseSettings,
       post_signup_show_instagram: true,
@@ -207,6 +227,10 @@ describe('SuccessOffer Component', () => {
         openNdsParams={baseOpenNdsParams}
       />
     );
+
+    await act(async () => {
+      await Promise.resolve();
+    });
 
     expect(screen.getByText('Siga nosso Instagram')).toBeInTheDocument();
     expect(screen.getByText('Ver Cardápio')).toBeInTheDocument();

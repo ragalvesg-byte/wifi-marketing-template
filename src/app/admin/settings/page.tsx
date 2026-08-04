@@ -381,9 +381,11 @@ export function PostSignupSettings({ settings, setSettings }: SettingsTabProps) 
             onChange={(e) => {
               const mode = e.target.value as StoreSettings['post_signup_redirect_mode'];
               let secs = 3;
+              if (mode === 'AUTO_3S') secs = 3;
               if (mode === 'AUTO_5S') secs = 5;
               if (mode === 'AUTO_10S') secs = 10;
               if (mode === 'NONE') secs = 0;
+              if (mode === 'ON_CLICK') secs = 0;
               setSettings({ 
                 ...settings, 
                 post_signup_redirect_mode: mode,
@@ -392,10 +394,11 @@ export function PostSignupSettings({ settings, setSettings }: SettingsTabProps) 
             }} 
             className="w-full px-4 py-2.5 rounded-xl border border-slate-200 text-sm font-semibold mb-2"
           >
-            <option value="NONE">Não redirecionar automaticamente (apenas pelo botão)</option>
+            <option value="NONE">Redirecionar instantaneamente (sem contador)</option>
             <option value="AUTO_3S">Redirecionar após 3 segundos</option>
             <option value="AUTO_5S">Redirecionar após 5 segundos</option>
             <option value="AUTO_10S">Redirecionar após 10 segundos</option>
+            <option value="ON_CLICK">Não redirecionar automaticamente (apenas pelo botão)</option>
           </select>
           <p className="text-[11px] text-slate-500 italic">Nota: A autorização do roteador (OpenNDS) ocorrerá silenciosamente no fundo. O redirecionamento será apenas para a URL destino do marketing selecionado acima.</p>
         </div>

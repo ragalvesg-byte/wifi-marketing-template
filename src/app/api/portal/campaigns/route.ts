@@ -16,8 +16,10 @@ export async function GET(request: Request) {
       console.warn('Supabase Admin não disponível na rota portal/campaigns (modo demo):', e);
     }
 
+    const isDemoModeVar = process.env.DEMO_MODE === 'true';
+
     // 2. Mock data para modo demonstração
-    if (isDemo || !supabase) {
+    if (isDemoModeVar && (isDemo || !supabase)) {
       const mockActiveCampaigns = [
         {
           id: 'campaign-1',
@@ -63,6 +65,10 @@ export async function GET(request: Request) {
       }
 
       return NextResponse.json({ campaigns: matched, isDemo: true });
+    }
+
+    if (!supabase) {
+      return NextResponse.json({ campaigns: [], isDemo: false });
     }
 
     // 3. Buscar dados do visitante
@@ -111,6 +117,15 @@ export async function GET(request: Request) {
 
     // 6. Aplicar regras de segmentação (matching logic)
     const matchedCampaigns = activeCampaigns.filter((campaign: any) => {
+      // Validação do período de início e término da campanha
+      const now = new Date();
+      if (campaign.start_date && new Date(campaign.start_date) > now) {
+        return false;
+      }
+      if (campaign.end_date && new Date(campaign.end_date) < now) {
+        return false;
+      }
+
       // Se a campanha for do tipo COUPON e todos os seus cupons já foram resgatados por este visitante
       if (campaign.type === 'COUPON' && campaign.coupons) {
         const hasUnredeemed = campaign.coupons.some((c: any) => !redeemedCouponIds.has(c.id));
@@ -229,6 +244,20 @@ export async function POST(request: Request) {
       .from('coupons')
       .update({ current_redemptions: coupon.current_redemptions + 1 })
       .eq('id', coupon.id);
+
+    // 4. Gravar evento de resgate no visitor_events
+    await supabase
+      .from('visitor_events')
+      .insert({
+        event_type: 'COUPON_REDEEMED',
+        visitor_id,
+        campaign_id: coupon.campaign_id || null,
+        metadata: {
+          coupon_code: coupon.code,
+          discount_type: coupon.discount_type,
+          discount_value: coupon.discount_value
+        }
+      });
 
     return NextResponse.json({ success: true });
   } catch (err) {

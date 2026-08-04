@@ -31,12 +31,14 @@ describe('Portal Campaigns Matching Engine', () => {
 
   describe('GET matching rules', () => {
     it('deve retornar campanhas de demonstração se isDemo=true', async () => {
+      process.env.DEMO_MODE = 'true';
       const req = new Request('http://localhost/api/portal/campaigns?isDemo=true');
       const res = await GET(req);
       expect(res.status).toBe(200);
       const data = await res.json();
       expect(data.isDemo).toBe(true);
       expect(data.campaigns.length).toBeGreaterThan(0);
+      delete process.env.DEMO_MODE;
     });
 
     it('deve filtrar campanhas para novos visitantes', async () => {
@@ -206,6 +208,58 @@ describe('Portal Campaigns Matching Engine', () => {
       expect(data.campaigns.length).toBe(1);
       expect(data.campaigns[0].id).toBe('c-coupon-2'); // Apenas o cupom não resgatado
     });
+
+    it('deve ocultar campanhas fora do periodo de vigencia', async () => {
+      // Mock do visitante
+      mockSelect.mockImplementationOnce(() => ({
+        eq: vi.fn().mockImplementationOnce(() => ({
+          single: () => Promise.resolve({ data: { id: 'v5', total_visits: 3 } }),
+        })),
+      }));
+
+      const now = Date.now();
+      const future = new Date(now + 24 * 60 * 60 * 1000).toISOString();
+      const past = new Date(now - 24 * 60 * 60 * 1000).toISOString();
+
+      // Mock campanhas com datas
+      const mockCampaigns = [
+        {
+          id: 'c-valid',
+          type: 'PROMO',
+          status: 'ACTIVE',
+          start_date: past,
+          end_date: future,
+        },
+        {
+          id: 'c-future',
+          type: 'PROMO',
+          status: 'ACTIVE',
+          start_date: future,
+        },
+        {
+          id: 'c-expired',
+          type: 'PROMO',
+          status: 'ACTIVE',
+          end_date: past,
+        },
+      ];
+
+      mockSelect.mockImplementationOnce(() => ({
+        eq: () => Promise.resolve({ data: mockCampaigns }),
+      }));
+
+      // Mock redemptions (nenhuma)
+      mockSelect.mockImplementationOnce(() => ({
+        eq: () => Promise.resolve({ data: [] }),
+      }));
+
+      const req = new Request('http://localhost/api/portal/campaigns?visitorId=v5');
+      const res = await GET(req);
+      const data = await res.json();
+
+      expect(data.campaigns.length).toBe(1);
+      expect(data.campaigns[0].id).toBe('c-valid');
+    });
   });
 
   describe('POST coupon redemption', () => {
@@ -220,25 +274,26 @@ describe('Portal Campaigns Matching Engine', () => {
         })),
       }));
 
-      // 2. Mock do insert na tabela de redemptions
-      mockInsert.mockImplementationOnce(() => Promise.resolve({ error: null }));
-
+      // 2. Mock do insert na tabela de redemptions e na tabela de visitor_events
+      mockInsert.mockImplementationOnce(() => Promise.resolve({ error: null })); // For coupon_redemptions
+      mockInsert.mockImplementationOnce(() => Promise.resolve({ error: null })); // For visitor_events
+ 
       // 3. Mock do update do contador de redemptions
       mockUpdate.mockImplementationOnce(() => ({
         eq: () => Promise.resolve({ error: null }),
       }));
-
+ 
       const req = new Request('http://localhost/api/portal/campaigns', {
         method: 'POST',
         body: JSON.stringify({ coupon_id: 'coupon-id-1', visitor_id: 'visitor-id-1' }),
       });
-
+ 
       const res = await POST(req);
       expect(res.status).toBe(200);
       const data = await res.json();
       expect(data.success).toBe(true);
-
-      expect(mockInsert).toHaveBeenCalledTimes(1);
+ 
+      expect(mockInsert).toHaveBeenCalledTimes(2);
       expect(mockUpdate).toHaveBeenCalledTimes(1);
     });
 

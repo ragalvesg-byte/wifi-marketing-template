@@ -286,3 +286,202 @@ export async function DELETE(request: Request) {
     return NextResponse.json({ error: 'Erro interno no servidor.' }, { status: 500 });
   }
 }
+
+export async function PUT(request: Request) {
+  try {
+    const body = await request.json();
+    const supabase = await createServerClientInstance();
+
+    const {
+      id,
+      title,
+      description,
+      type,
+      status,
+      media_url,
+      media_type = 'IMAGE',
+      aspect_ratio = '4:5',
+      button_text,
+      button_url,
+      start_date,
+      end_date,
+      // Target
+      target_type = 'ALL',
+      rules = {},
+      // Coupon
+      coupon_code,
+      discount_type = 'PERCENTAGE',
+      discount_value = 0,
+      max_redemptions = null,
+      expires_at = null,
+    } = body;
+
+    if (!id) {
+      return NextResponse.json({ error: 'ID da campanha é obrigatório para edição.' }, { status: 400 });
+    }
+
+    if (!title || !type) {
+      return NextResponse.json({ error: 'Título e tipo de campanha são obrigatórios.' }, { status: 400 });
+    }
+
+    if (!supabase) {
+      // Modo de demonstração em memória
+      const index = mockCampaigns.findIndex(c => c.id === id);
+      if (index === -1) {
+        return NextResponse.json({ error: 'Campanha não encontrada.' }, { status: 404 });
+      }
+
+      const updatedCampaign = {
+        ...mockCampaigns[index],
+        title,
+        description,
+        type,
+        status,
+        media_url,
+        media_type,
+        aspect_ratio,
+        button_text,
+        button_url,
+        start_date,
+        end_date,
+        updated_at: new Date().toISOString(),
+        campaign_audiences: [
+          {
+            id: mockCampaigns[index].campaign_audiences?.[0]?.id || 'aud-' + Math.random().toString(36).substring(2, 9),
+            campaign_id: id,
+            target_type,
+            rules,
+          }
+        ]
+      };
+
+      if (type === 'COUPON' && coupon_code) {
+        updatedCampaign.coupons = [
+          {
+            id: mockCampaigns[index].coupons?.[0]?.id || 'coupon-' + Math.random().toString(36).substring(2, 9),
+            campaign_id: id,
+            code: coupon_code.toUpperCase(),
+            discount_type,
+            discount_value,
+            max_redemptions: max_redemptions ? parseInt(String(max_redemptions), 10) : null,
+            current_redemptions: mockCampaigns[index].coupons?.[0]?.current_redemptions || 0,
+            expires_at,
+          }
+        ];
+      } else {
+        delete updatedCampaign.coupons;
+      }
+
+      mockCampaigns[index] = updatedCampaign;
+      return NextResponse.json({ success: true, isDemo: true, campaign: updatedCampaign });
+    }
+
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) {
+      return NextResponse.json({ error: 'Não autorizado' }, { status: 401 });
+    }
+
+    // 1. Atualizar Campanha
+    const { error: campaignError } = await supabase
+      .from('campaigns')
+      .update({
+        title,
+        description,
+        type,
+        status,
+        media_url,
+        media_type,
+        aspect_ratio,
+        button_text,
+        button_url: button_url || null,
+        start_date: start_date || null,
+        end_date: end_date || null,
+        updated_at: new Date().toISOString(),
+      })
+      .eq('id', id);
+
+    if (campaignError) {
+      console.error('Erro ao atualizar campanha:', campaignError);
+      return NextResponse.json({ error: 'Erro ao atualizar campanha no banco.' }, { status: 500 });
+    }
+
+    // 2. Atualizar ou inserir público
+    const { data: existingAudience } = await supabase
+      .from('campaign_audiences')
+      .select('id')
+      .eq('campaign_id', id)
+      .maybeSingle();
+
+    if (existingAudience) {
+      const { error: audError } = await supabase
+        .from('campaign_audiences')
+        .update({ target_type, rules })
+        .eq('campaign_id', id);
+
+      if (audError) {
+        console.error('Erro ao atualizar regras de público:', audError);
+        return NextResponse.json({ error: 'Erro ao atualizar regras de público.' }, { status: 500 });
+      }
+    } else {
+      const { error: audError } = await supabase
+        .from('campaign_audiences')
+        .insert({ campaign_id: id, target_type, rules });
+
+      if (audError) {
+        console.error('Erro ao inserir regras de público:', audError);
+        return NextResponse.json({ error: 'Erro ao inserir regras de público.' }, { status: 500 });
+      }
+    }
+
+    // 3. Atualizar Cupom
+    if (type === 'COUPON' && coupon_code) {
+      const { data: existingCoupon } = await supabase
+        .from('coupons')
+        .select('id')
+        .eq('campaign_id', id)
+        .maybeSingle();
+
+      if (existingCoupon) {
+        const { error: couponError } = await supabase
+          .from('coupons')
+          .update({
+            code: coupon_code.trim().toUpperCase(),
+            discount_type,
+            discount_value,
+            max_redemptions: max_redemptions ? parseInt(String(max_redemptions), 10) : null,
+            expires_at: expires_at || null,
+          })
+          .eq('campaign_id', id);
+
+        if (couponError) {
+          console.error('Erro ao atualizar cupom:', couponError);
+          return NextResponse.json({ error: 'Erro ao atualizar cupom (código duplicado ou inválido).' }, { status: 500 });
+        }
+      } else {
+        const { error: couponError } = await supabase
+          .from('coupons')
+          .insert({
+            campaign_id: id,
+            code: coupon_code.trim().toUpperCase(),
+            discount_type,
+            discount_value,
+            max_redemptions: max_redemptions ? parseInt(String(max_redemptions), 10) : null,
+            expires_at: expires_at || null,
+          });
+
+        if (couponError) {
+          console.error('Erro ao inserir cupom:', couponError);
+          return NextResponse.json({ error: 'Erro ao criar cupom para a campanha.' }, { status: 500 });
+        }
+      }
+    } else {
+      // Se não for campanha de cupom, remove qualquer cupom associado
+      await supabase.from('coupons').delete().eq('campaign_id', id);
+    }
+
+    return NextResponse.json({ success: true, isDemo: false });
+  } catch (err) {
+    console.error('Erro interno na edição de campanha:', err);
+    return NextResponse.json({ error: 'Erro interno no servidor.' }, { status: 500 });
+  }
+}

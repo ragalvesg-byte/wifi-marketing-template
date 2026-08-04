@@ -270,6 +270,7 @@ export function SuccessOffer({ settings, visitorId, visitorName, authUrl, openNd
   // Estados de Campanhas Dinâmicas
   const [activeCouponCampaign, setActiveCouponCampaign] = useState<any>(null);
   const [activePromoCampaign, setActivePromoCampaign] = useState<any>(null);
+  const [loadingCampaigns, setLoadingCampaigns] = useState(true);
 
   // Modo real é ativado somente se openNdsParams.isRealMode for true E houver authUrl válida
   const isRealMode = Boolean(openNdsParams.isRealMode && authUrl);
@@ -313,42 +314,44 @@ export function SuccessOffer({ settings, visitorId, visitorName, authUrl, openNd
     };
   }, [authUrl, isDemoMode]);
 
-  // Carrega campanhas dinâmicas assim que o Wi-Fi for autorizado
+  // Carrega campanhas dinâmicas assim que o componente é montado
   useEffect(() => {
     let isMounted = true;
-    if (authState === 'AUTHORIZED') {
-      const getCampaigns = async () => {
-        try {
-          const res = await fetch(`/api/portal/campaigns?visitorId=${visitorId || ''}&isDemo=${isDemoMode}`);
-          if (res.ok && isMounted) {
-            const data = await res.json();
-            const list = data.campaigns || [];
+    const getCampaigns = async () => {
+      try {
+        const res = await fetch(`/api/portal/campaigns?visitorId=${visitorId || ''}&isDemo=${isDemoMode}`);
+        if (res.ok && isMounted) {
+          const data = await res.json();
+          const list = data.campaigns || [];
 
-            const couponCamp = list.find((c: any) => c.type === 'COUPON');
-            if (couponCamp) {
-              setActiveCouponCampaign(couponCamp);
-              sendVisitorEvent('CAMPAIGN_VIEWED', { visitor_id: visitorId, campaign_id: couponCamp.id });
-            }
-
-            const promoCamp = list.find((c: any) => c.type === 'PROMO');
-            if (promoCamp) {
-              setActivePromoCampaign(promoCamp);
-              sendVisitorEvent('CAMPAIGN_VIEWED', { visitor_id: visitorId, campaign_id: promoCamp.id });
-            }
+          const couponCamp = list.find((c: any) => c.type === 'COUPON');
+          if (couponCamp) {
+            setActiveCouponCampaign(couponCamp);
+            sendVisitorEvent('CAMPAIGN_VIEWED', { visitor_id: visitorId, campaign_id: couponCamp.id });
           }
-        } catch (err) {
-          console.warn('Erro ao carregar campanhas dinâmicas:', err);
+
+          const promoCamp = list.find((c: any) => c.type === 'PROMO');
+          if (promoCamp) {
+            setActivePromoCampaign(promoCamp);
+            sendVisitorEvent('CAMPAIGN_VIEWED', { visitor_id: visitorId, campaign_id: promoCamp.id });
+          }
         }
-      };
-      getCampaigns();
-    }
+      } catch (err) {
+        console.warn('Erro ao carregar campanhas dinâmicas:', err);
+      } finally {
+        if (isMounted) {
+          setLoadingCampaigns(false);
+        }
+      }
+    };
+    getCampaigns();
     return () => {
       isMounted = false;
     };
-  }, [authState, visitorId, isDemoMode]);
+  }, [visitorId, isDemoMode]);
 
   useEffect(() => {
-    if (authState === 'AUTHORIZED') {
+    if (authState === 'AUTHORIZED' && !loadingCampaigns) {
       if (
         (activePromoCampaign && settings.post_signup_banner_enabled !== false) ||
         (!activePromoCampaign && settings.post_signup_action === 'BANNER' && settings.post_signup_banner_enabled !== false)
@@ -356,12 +359,20 @@ export function SuccessOffer({ settings, visitorId, visitorName, authUrl, openNd
         setBannerVisible(true);
       }
 
-      if (settings.post_signup_redirect_mode !== 'NONE') {
+      if (settings.post_signup_redirect_mode === 'NONE') {
+        // Redireciona imediatamente sem mostrar contador
+        handleMarketingRedirect();
+      } else if (
+        settings.post_signup_redirect_mode === 'AUTO_3S' ||
+        settings.post_signup_redirect_mode === 'AUTO_5S' ||
+        settings.post_signup_redirect_mode === 'AUTO_10S'
+      ) {
         const delay = settings.post_signup_redirect_seconds || 3;
         setTimeLeft(delay);
       }
+      // Se for ON_CLICK, não inicia contador automático
     }
-  }, [authState, settings, activePromoCampaign]);
+  }, [authState, loadingCampaigns, settings, activePromoCampaign]);
 
   const isValidUrl = (url?: string | null): boolean => {
     if (!url) return false;
@@ -454,6 +465,17 @@ export function SuccessOffer({ settings, visitorId, visitorName, authUrl, openNd
     );
   }
 
+  // Mostra um loader curto enquanto carrega campanhas para evitar piscadas visuais (layout shift)
+  if (loadingCampaigns && authState === 'AUTHORIZED') {
+    return (
+      <div className="w-full max-w-md bg-white/95 backdrop-blur-md text-slate-900 rounded-3xl shadow-2xl overflow-hidden border border-white/20 p-8 text-center space-y-4 animate-in fade-in">
+        <Loader2 className="w-10 h-10 text-blue-600 animate-spin mx-auto" />
+        <h2 className="text-lg font-bold">Carregando ofertas exclusivas...</h2>
+        <p className="text-xs text-slate-500">Buscando campanhas disponíveis para você.</p>
+      </div>
+    );
+  }
+
   return (
     <>
       <div className={`w-full max-w-md bg-white/95 backdrop-blur-md text-slate-900 rounded-3xl shadow-2xl overflow-hidden border border-white/20 p-6 sm:p-8 text-center space-y-4 animate-in fade-in zoom-in-95 transition-all ${bannerVisible ? 'blur-sm scale-95 opacity-50' : ''}`}>
@@ -481,8 +503,8 @@ export function SuccessOffer({ settings, visitorId, visitorName, authUrl, openNd
           </p>
         </div>
 
-        {/* CUPOM DINÂMICO (PRIORITÁRIO) OU ESTÁTICO (FALLBACK) */}
-        {activeCouponCampaign ? (
+        {/* CAMPANHA DE CUPOM DINÂMICO */}
+        {activeCouponCampaign && (
           <div className="bg-gradient-to-br from-emerald-50 to-teal-50 border border-emerald-200 rounded-2xl p-4 text-center mt-4">
              <span className="text-[10px] uppercase font-bold tracking-wider text-emerald-600 block mb-1">
                {activeCouponCampaign.title || 'CUPOM DE DESCONTO'}
@@ -508,7 +530,16 @@ export function SuccessOffer({ settings, visitorId, visitorName, authUrl, openNd
                 )}
               </button>
           </div>
-        ) : settings.post_signup_action === 'COUPON' && settings.promo_coupon_code ? (
+        )}
+
+        {/* CUPOM ESTÁTICO (EXIBIDO SE:
+            1. NÃO HOUVER CUPOM DINÂMICO, E (ACTION FOR COUPON OU SHOW_COUPON FOR ATIVO)
+            OU
+            2. HOUVER CUPOM DINÂMICO, MAS SHOW_COUPON FOR EXPLICITAMENTE ATIVO) */}
+        {settings.promo_coupon_code && (
+          (!activeCouponCampaign && (settings.post_signup_action === 'COUPON' || settings.post_signup_show_coupon)) ||
+          (activeCouponCampaign && settings.post_signup_show_coupon)
+        ) ? (
           <div className="bg-gradient-to-br from-emerald-50 to-teal-50 border border-emerald-200 rounded-2xl p-4 text-center mt-4">
              <span className="text-[10px] uppercase font-bold tracking-wider text-emerald-600 block mb-1">CUPOM DE DESCONTO</span>
              <span className="font-mono font-extrabold text-slate-900 text-2xl tracking-wider block mb-3">

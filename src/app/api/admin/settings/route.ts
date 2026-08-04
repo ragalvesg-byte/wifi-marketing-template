@@ -121,7 +121,7 @@ export async function POST(request: Request) {
       post_signup_promo_button_url: sanitizedPostSignupPromoButton,
       post_signup_promo_image_aspect_ratio: body.post_signup_promo_image_aspect_ratio || '4:5',
       post_signup_redirect_mode: body.post_signup_redirect_mode || 'NONE',
-      post_signup_redirect_seconds: body.post_signup_redirect_seconds || 3,
+      post_signup_redirect_seconds: (body.post_signup_redirect_seconds !== undefined && body.post_signup_redirect_seconds !== null) ? body.post_signup_redirect_seconds : 3,
       post_signup_show_coupon: body.post_signup_show_coupon ?? false,
       post_signup_show_instagram: body.post_signup_show_instagram ?? false,
       post_signup_show_menu: body.post_signup_show_menu ?? false,

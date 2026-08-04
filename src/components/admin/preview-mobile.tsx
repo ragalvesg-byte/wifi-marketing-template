@@ -141,7 +141,7 @@ export function PreviewMobile({ settings, step }: PreviewMobileProps) {
 
   // POST
   const showBannerOverlay = settings.post_signup_action === 'BANNER' && settings.post_signup_banner_enabled !== false;
-  const hasAutoRedirect = settings.post_signup_redirect_mode !== 'NONE';
+  const hasAutoRedirect = settings.post_signup_redirect_mode !== 'NONE' && settings.post_signup_redirect_mode !== 'ON_CLICK';
 
   return (
     <div className="w-full h-full text-white flex flex-col pt-8 overflow-y-auto relative" style={bgStyle}>
@@ -194,7 +194,7 @@ export function PreviewMobile({ settings, step }: PreviewMobileProps) {
           <div className="space-y-3 w-full">
             {!showBannerOverlay && hasAutoRedirect ? (
               <div className="mt-4 pt-4 border-t border-white/10 space-y-3">
-                <p className="text-xs font-semibold text-slate-300">Redirecionando em 5 segundos...</p>
+                <p className="text-xs font-semibold text-slate-300">Redirecionando em {settings.post_signup_redirect_seconds || 3} segundos...</p>
                 <div className="flex gap-2">
                   <button className="flex-1 py-2.5 rounded-xl bg-white/10 text-white font-bold text-xs hover:bg-white/20 transition-colors">
                     Cancelar
