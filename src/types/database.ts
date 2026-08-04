@@ -58,6 +58,8 @@ export interface StoreSettings {
 
   // Jornada do Visitante: Depois do Cadastro
   post_signup_action?: 'COUPON' | 'PROMO' | 'BANNER' | 'MENU' | 'INSTAGRAM' | 'GOOGLE' | 'CUSTOM_URL' | 'SHOW_MESSAGE';
+  post_signup_banner_enabled?: boolean;
+  post_signup_banner_closable?: boolean;
   post_signup_title?: string;
   post_signup_message?: string;
   post_signup_url?: string;

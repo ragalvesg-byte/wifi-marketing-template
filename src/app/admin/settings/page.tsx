@@ -6,6 +6,7 @@ import { MOCK_STORE_SETTINGS } from '@/lib/supabase/mock-data';
 import { StoreSettings, ThemePreset, GoogleReviewTiming } from '@/types/database';
 import { THEME_PRESETS, applyThemePreset } from '@/lib/themes/presets';
 import { Settings, Save, Check, Palette, Loader2, AlertCircle, Sparkles, Link as LinkIcon, UserCheck, Video, LayoutTemplate, Share2, Smartphone } from 'lucide-react';
+import { ImageUploader } from '@/components/admin/image-uploader';
 
 // Novo componente de Prévia
 import { PreviewMobile } from '@/components/admin/preview-mobile';
@@ -200,12 +201,20 @@ export default function SettingsPage() {
                       </div>
                     </div>
                     <div>
-                      <label className="block text-xs font-semibold uppercase tracking-wider text-slate-600 mb-1">URL da Logo</label>
-                      <input type="text" value={settings.logo_url || ''} onChange={(e) => setSettings({ ...settings, logo_url: e.target.value })} className="w-full px-4 py-2.5 rounded-xl border border-slate-200 text-sm focus:ring-2 focus:ring-blue-500/30" />
+                      <ImageUploader
+                        label="URL da Logo"
+                        folder="logos"
+                        value={settings.logo_url}
+                        onChange={(url) => setSettings({ ...settings, logo_url: url })}
+                      />
                     </div>
                     <div>
-                      <label className="block text-xs font-semibold uppercase tracking-wider text-slate-600 mb-1">Imagem de Fundo (Wallpaper)</label>
-                      <input type="text" value={settings.background_url || ''} onChange={(e) => setSettings({ ...settings, background_url: e.target.value })} className="w-full px-4 py-2.5 rounded-xl border border-slate-200 text-sm focus:ring-2 focus:ring-blue-500/30" />
+                      <ImageUploader
+                        label="Imagem de Fundo (Wallpaper)"
+                        folder="backgrounds"
+                        value={settings.background_url}
+                        onChange={(url) => setSettings({ ...settings, background_url: url })}
+                      />
                     </div>
                   </div>
                 </div>
@@ -256,8 +265,12 @@ export default function SettingsPage() {
                           </select>
                         </div>
                         <div className="md:col-span-2">
-                          <label className="block text-xs font-semibold uppercase tracking-wider text-slate-600 mb-1">URL da Mídia</label>
-                          <input type="text" value={settings.landing_media_url || ''} onChange={(e) => setSettings({ ...settings, landing_media_url: e.target.value })} className="w-full px-4 py-2.5 rounded-xl border border-slate-200 text-sm focus:ring-2" placeholder="https://" />
+                          <ImageUploader
+                            label="Mídia"
+                            folder="banners"
+                            value={settings.landing_media_url}
+                            onChange={(url) => setSettings({ ...settings, landing_media_url: url })}
+                          />
                         </div>
                       </>
                     )}
@@ -436,8 +449,12 @@ export default function SettingsPage() {
                   <div className="space-y-4 pt-2 border-t border-slate-100">
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                       <div className="md:col-span-2">
-                        <label className="block text-xs font-semibold uppercase text-slate-600 mb-1">URL da Imagem</label>
-                        <input type="url" value={settings.post_signup_promo_image_url || ''} onChange={(e) => setSettings({ ...settings, post_signup_promo_image_url: e.target.value })} className="w-full px-4 py-2.5 rounded-xl border border-slate-200 text-sm" placeholder="https://" />
+                        <ImageUploader
+                          label="URL da Imagem"
+                          folder="promos"
+                          value={settings.post_signup_promo_image_url}
+                          onChange={(url) => setSettings({ ...settings, post_signup_promo_image_url: url })}
+                        />
                       </div>
                       <div>
                         <label className="block text-xs font-semibold uppercase text-slate-600 mb-1">Formato da Imagem</label>
@@ -464,6 +481,14 @@ export default function SettingsPage() {
                         <label className="block text-xs font-semibold uppercase text-slate-600 mb-1">URL do Botão</label>
                         <input type="url" value={settings.post_signup_promo_button_url || ''} onChange={(e) => setSettings({ ...settings, post_signup_promo_button_url: e.target.value })} className="w-full px-4 py-2.5 rounded-xl border border-slate-200 text-sm" placeholder="https:// (Opcional)" />
                       </div>
+                      {settings.post_signup_action === 'BANNER' && (
+                        <div className="md:col-span-2 pt-2">
+                          <label className="flex items-center gap-2 cursor-pointer text-sm font-medium">
+                            <input type="checkbox" checked={settings.post_signup_banner_closable ?? true} onChange={(e) => setSettings({ ...settings, post_signup_banner_closable: e.target.checked })} className="w-4 h-4 rounded border-slate-300 text-blue-600" />
+                            Permitir que o visitante feche o banner
+                          </label>
+                        </div>
+                      )}
                     </div>
                   </div>
                 )}

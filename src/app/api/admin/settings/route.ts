@@ -103,6 +103,8 @@ export async function POST(request: Request) {
 
       // Jornada do Visitante: Depois do Cadastro
       post_signup_action: body.post_signup_action || 'SHOW_MESSAGE',
+      post_signup_banner_enabled: body.post_signup_banner_enabled ?? false,
+      post_signup_banner_closable: body.post_signup_banner_closable ?? true,
       post_signup_title: body.post_signup_title || 'Internet liberada!',
       post_signup_message: body.post_signup_message || 'Aproveite sua conexão. Obrigado por nos visitar!',
       post_signup_url: sanitizedPostSignupUrl,

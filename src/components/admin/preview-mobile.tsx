@@ -2,7 +2,7 @@
 
 import React from 'react';
 import { StoreSettings } from '@/types/database';
-import { Camera, Map, Star, Link as LinkIcon } from 'lucide-react';
+import { CheckCircle2, Copy, Star, Camera, Map, Check, X } from 'lucide-react';
 
 interface PreviewMobileProps {
   settings: StoreSettings;
@@ -140,9 +140,12 @@ export function PreviewMobile({ settings, step }: PreviewMobileProps) {
   }
 
   // POST
+  const showBannerOverlay = settings.post_signup_action === 'BANNER' && settings.post_signup_banner_enabled !== false;
+  const hasAutoRedirect = settings.post_signup_redirect_mode !== 'NONE';
+
   return (
-    <div className="w-full h-full text-white flex flex-col pt-8 overflow-y-auto" style={bgStyle}>
-      <div className="p-4 flex-1 flex flex-col items-center justify-center">
+    <div className="w-full h-full text-white flex flex-col pt-8 overflow-y-auto relative" style={bgStyle}>
+      <div className={`p-4 flex-1 flex flex-col items-center justify-center transition-all ${showBannerOverlay ? 'blur-sm scale-95 opacity-50' : ''}`}>
         
         <div className="bg-white/10 backdrop-blur-md rounded-3xl p-6 border border-white/20 shadow-xl w-full max-w-sm mx-auto text-center">
           <div className="w-12 h-12 rounded-full bg-emerald-500/20 text-emerald-400 flex items-center justify-center mx-auto mb-4">
@@ -159,7 +162,7 @@ export function PreviewMobile({ settings, step }: PreviewMobileProps) {
             </div>
           )}
           
-          {(settings.post_signup_action === 'PROMO' || settings.post_signup_action === 'BANNER') && settings.post_signup_promo_image_url && (
+          {settings.post_signup_action === 'PROMO' && settings.post_signup_promo_image_url && (
             <div className="bg-white/10 rounded-xl overflow-hidden mb-6 border border-white/20">
               <div 
                 className="w-full bg-black/40 relative overflow-hidden" 
@@ -168,7 +171,7 @@ export function PreviewMobile({ settings, step }: PreviewMobileProps) {
                     : settings.post_signup_promo_image_aspect_ratio === '1:1' ? '1/1'
                     : settings.post_signup_promo_image_aspect_ratio === '16:9' ? '16/9'
                     : '4/5',
-                  maxHeight: '40vh' // Limita a altura para não esconder os botões principais
+                  maxHeight: '40vh'
                 }}
               >
                 <img src={settings.post_signup_promo_image_url} alt="Promo" className="w-full h-full object-cover" />
@@ -189,9 +192,25 @@ export function PreviewMobile({ settings, step }: PreviewMobileProps) {
           )}
 
           <div className="space-y-3 w-full">
-            <button style={{ backgroundColor: primaryColor }} className="w-full py-3 rounded-xl font-bold text-sm shadow-lg text-white">
-              Navegar na Internet
-            </button>
+            {!showBannerOverlay && hasAutoRedirect ? (
+              <div className="mt-4 pt-4 border-t border-white/10 space-y-3">
+                <p className="text-xs font-semibold text-slate-300">Redirecionando em 5 segundos...</p>
+                <div className="flex gap-2">
+                  <button className="flex-1 py-2.5 rounded-xl bg-white/10 text-white font-bold text-xs hover:bg-white/20 transition-colors">
+                    Cancelar
+                  </button>
+                  <button style={{ backgroundColor: primaryColor }} className="flex-1 py-2.5 rounded-xl text-white font-bold text-xs shadow-md transition-colors">
+                    Ir agora
+                  </button>
+                </div>
+              </div>
+            ) : (
+              !showBannerOverlay && (
+                <button style={{ backgroundColor: primaryColor }} className="w-full py-3 rounded-xl font-bold text-sm shadow-lg text-white">
+                  Navegar na Internet
+                </button>
+              )
+            )}
             
             {settings.post_signup_show_instagram && (
                <button className="w-full py-3 rounded-xl font-bold text-sm bg-white/10 hover:bg-white/20 border border-white/20 flex items-center justify-center gap-2">
@@ -211,13 +230,69 @@ export function PreviewMobile({ settings, step }: PreviewMobileProps) {
                </button>
              )}
           </div>
-          
-          {settings.post_signup_redirect_mode !== 'NONE' && (
-            <p className="text-[10px] text-slate-400 mt-4 italic">Redirecionando automaticamente...</p>
-          )}
         </div>
-        
       </div>
+
+      {showBannerOverlay && (
+        <div className="absolute inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm">
+          <div className="w-full bg-white rounded-3xl shadow-2xl overflow-hidden relative flex flex-col">
+            {settings.post_signup_banner_closable !== false && (
+              <button className="absolute top-2 right-2 w-7 h-7 bg-black/50 text-white rounded-full flex items-center justify-center backdrop-blur-md z-10">
+                <X className="w-4 h-4" />
+              </button>
+            )}
+
+            {settings.post_signup_promo_image_url ? (
+              <div 
+                className="w-full bg-slate-100 relative" 
+                style={{
+                  aspectRatio: settings.post_signup_promo_image_aspect_ratio === '9:16' ? '9/16' 
+                    : settings.post_signup_promo_image_aspect_ratio === '1:1' ? '1/1'
+                    : settings.post_signup_promo_image_aspect_ratio === '16:9' ? '16/9'
+                    : '4/5',
+                  maxHeight: '50vh'
+                }}
+              >
+                <img src={settings.post_signup_promo_image_url} alt="Banner" className="w-full h-full object-cover" />
+              </div>
+            ) : (
+              <div className="w-full h-32 bg-gradient-to-br from-blue-500 to-purple-600 flex items-center justify-center p-6">
+                <Star className="w-8 h-8 text-white opacity-50" />
+              </div>
+            )}
+
+            <div className="p-5 text-slate-900 overflow-y-auto flex-1">
+              {settings.post_signup_promo_title && <h2 className="text-lg font-black mb-1">{settings.post_signup_promo_title}</h2>}
+              {settings.post_signup_promo_description && <p className="text-xs text-slate-600 mb-4">{settings.post_signup_promo_description}</p>}
+              
+              {hasAutoRedirect ? (
+                <div className="space-y-2">
+                  <p className="text-[10px] font-bold text-center text-slate-500 mb-1">Redirecionando em 5 segundos...</p>
+                  <button style={{ backgroundColor: primaryColor }} className="w-full py-2.5 rounded-xl text-white font-bold text-xs shadow-md">
+                    {settings.post_signup_promo_button_text || 'Ir agora'}
+                  </button>
+                  <button className="w-full py-2.5 rounded-xl bg-slate-100 text-slate-600 font-bold text-xs">
+                    Cancelar redirecionamento
+                  </button>
+                </div>
+              ) : (
+                <div className="space-y-2">
+                  {settings.post_signup_promo_button_text && (
+                    <button style={{ backgroundColor: primaryColor }} className="w-full py-2.5 rounded-xl text-white font-bold text-xs shadow-md">
+                      {settings.post_signup_promo_button_text}
+                    </button>
+                  )}
+                  {settings.post_signup_banner_closable !== false && (
+                    <button className="w-full py-2.5 rounded-xl bg-slate-100 text-slate-600 font-bold text-xs">
+                      Fechar
+                    </button>
+                  )}
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
