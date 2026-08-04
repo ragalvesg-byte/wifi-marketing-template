@@ -3,7 +3,7 @@
 import React from 'react';
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
-import { LayoutDashboard, Users, Settings, LogOut, Wifi, AlertTriangle } from 'lucide-react';
+import { LayoutDashboard, Users, Settings, LogOut, Wifi, AlertTriangle, Megaphone } from 'lucide-react';
 import { createClient } from '@/lib/supabase/client';
 
 interface AdminNavProps {
@@ -26,6 +26,7 @@ export function AdminNav({ storeName = 'Café & Bistro Central', isDemo = true }
   const navItems = [
     { label: 'Visão Geral', href: '/admin/dashboard', icon: LayoutDashboard },
     { label: 'Lista de Contatos', href: '/admin/contacts', icon: Users },
+    { label: 'Campanhas', href: '/admin/campaigns', icon: Megaphone },
     { label: 'Configurações', href: '/admin/settings', icon: Settings },
   ];
 

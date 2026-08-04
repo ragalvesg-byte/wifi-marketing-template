@@ -169,7 +169,11 @@ export type VisitorEventType =
   | 'WIFI_AUTH_SENT'
   | 'INSTAGRAM_CLICKED'
   | 'MENU_CLICKED'
-  | 'GOOGLE_REVIEW_CLICKED';
+  | 'GOOGLE_REVIEW_CLICKED'
+  | 'CAMPAIGN_VIEWED'
+  | 'CAMPAIGN_CLICKED'
+  | 'COUPON_COPIED'
+  | 'COUPON_REDEEMED';
 
 export interface VisitorEvent {
   id?: string;
@@ -181,4 +185,50 @@ export interface VisitorEvent {
   metadata?: Record<string, any>;
   created_at?: string;
 }
+
+export interface Campaign {
+  id: string;
+  title: string;
+  description?: string | null;
+  type: 'PROMO' | 'COUPON' | 'BANNER' | 'SURVEY';
+  status: 'DRAFT' | 'ACTIVE' | 'PAUSED' | 'EXPIRED';
+  media_url?: string | null;
+  media_type?: 'IMAGE' | 'VIDEO' | null;
+  aspect_ratio?: '9:16' | '4:5' | '1:1' | '16:9' | null;
+  button_text?: string | null;
+  button_url?: string | null;
+  start_date?: string | null;
+  end_date?: string | null;
+  created_at?: string;
+  updated_at?: string;
+}
+
+export interface CampaignAudience {
+  id: string;
+  campaign_id: string;
+  target_type: 'ALL' | 'NEW_VISITORS' | 'RETURNING_VISITORS' | 'GENDER' | 'BIRTHDAY_MONTH' | 'CUSTOM_SEGMENT';
+  rules: Record<string, any>;
+  created_at?: string;
+}
+
+export interface Coupon {
+  id: string;
+  campaign_id?: string | null;
+  code: string;
+  discount_type: 'PERCENTAGE' | 'FIXED';
+  discount_value: number;
+  expires_at?: string | null;
+  max_redemptions?: number | null;
+  current_redemptions: number;
+  created_at?: string;
+}
+
+export interface CouponRedemption {
+  id: string;
+  coupon_id: string;
+  visitor_id: string;
+  redeemed_at: string;
+  metadata?: Record<string, any>;
+}
+
 

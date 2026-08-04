@@ -10,6 +10,10 @@ const ALLOWED_EVENTS: Set<VisitorEventType> = new Set([
   'INSTAGRAM_CLICKED',
   'MENU_CLICKED',
   'GOOGLE_REVIEW_CLICKED',
+  'CAMPAIGN_VIEWED',
+  'CAMPAIGN_CLICKED',
+  'COUPON_COPIED',
+  'COUPON_REDEEMED',
 ]);
 
 const rateLimitMap = new Map<string, { count: number; resetAt: number }>();

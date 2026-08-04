@@ -66,12 +66,19 @@ interface PromoBannerProps {
 export function PromoBanner({
   visible,
   settings,
+  activePromoCampaign,
   timeLeft,
   primaryColor,
   onCancel,
   onRedirect,
-}: PromoBannerProps) {
+}: PromoBannerProps & { activePromoCampaign?: any }) {
   if (!visible) return null;
+
+  const title = activePromoCampaign?.title || settings.post_signup_promo_title;
+  const description = activePromoCampaign?.description || settings.post_signup_promo_description;
+  const mediaUrl = activePromoCampaign?.media_url || settings.post_signup_promo_image_url;
+  const aspectRatio = activePromoCampaign?.aspect_ratio || settings.post_signup_promo_image_aspect_ratio || '4:5';
+  const buttonText = activePromoCampaign?.button_text || settings.post_signup_promo_button_text || 'Ir agora';
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 sm:p-6 bg-black/60 backdrop-blur-sm animate-in fade-in">
@@ -85,18 +92,18 @@ export function PromoBanner({
           </button>
         )}
 
-        {settings.post_signup_promo_image_url ? (
+        {mediaUrl ? (
            <div 
               className="w-full bg-slate-100 relative" 
               style={{
-                aspectRatio: settings.post_signup_promo_image_aspect_ratio === '9:16' ? '9/16' 
-                  : settings.post_signup_promo_image_aspect_ratio === '1:1' ? '1/1'
-                  : settings.post_signup_promo_image_aspect_ratio === '16:9' ? '16/9'
+                aspectRatio: aspectRatio === '9:16' ? '9/16' 
+                  : aspectRatio === '1:1' ? '1/1'
+                  : aspectRatio === '16:9' ? '16/9'
                   : '4/5',
                 maxHeight: '60vh'
               }}
             >
-              <img src={settings.post_signup_promo_image_url} alt="Banner" className="w-full h-full object-cover" />
+              <img src={mediaUrl} alt="Banner" className="w-full h-full object-cover" />
             </div>
         ) : (
            <div className="w-full h-40 bg-gradient-to-br from-blue-500 to-purple-600 flex items-center justify-center text-white p-6">
@@ -105,8 +112,8 @@ export function PromoBanner({
         )}
 
         <div className="p-6 bg-white flex-1 overflow-y-auto">
-           {settings.post_signup_promo_title && <h2 className="text-xl font-black text-slate-900 mb-2">{settings.post_signup_promo_title}</h2>}
-           {settings.post_signup_promo_description && <p className="text-sm text-slate-600 mb-6">{settings.post_signup_promo_description}</p>}
+           {title && <h2 className="text-xl font-black text-slate-900 mb-2">{title}</h2>}
+           {description && <p className="text-sm text-slate-600 mb-6">{description}</p>}
            
            {timeLeft !== null ? (
              <div className="space-y-3">
@@ -116,7 +123,7 @@ export function PromoBanner({
                  style={{ backgroundColor: primaryColor }}
                  className="w-full py-3.5 rounded-xl text-white font-bold text-sm shadow-lg hover:opacity-95 transition-opacity"
                >
-                 {settings.post_signup_promo_button_text || 'Ir agora'}
+                 {buttonText}
                </button>
                <button 
                  onClick={onCancel}
@@ -127,17 +134,13 @@ export function PromoBanner({
              </div>
            ) : (
              <div className="space-y-3">
-               {settings.post_signup_promo_button_text && (
+               {buttonText && (
                   <button 
-                    onClick={() => {
-                      if (settings.post_signup_promo_button_url) {
-                        window.location.href = settings.post_signup_promo_button_url;
-                      }
-                    }}
+                    onClick={onRedirect}
                     style={{ backgroundColor: primaryColor }}
                     className="w-full py-3.5 rounded-xl text-white font-bold text-sm shadow-lg hover:opacity-95 transition-opacity"
                   >
-                    {settings.post_signup_promo_button_text}
+                    {buttonText}
                   </button>
                )}
                {settings.post_signup_banner_closable && (
@@ -264,6 +267,10 @@ export function SuccessOffer({ settings, visitorId, visitorName, authUrl, openNd
   const [bannerVisible, setBannerVisible] = useState(false);
   const [timeLeft, setTimeLeft] = useState<number | null>(null);
 
+  // Estados de Campanhas Dinâmicas
+  const [activeCouponCampaign, setActiveCouponCampaign] = useState<any>(null);
+  const [activePromoCampaign, setActivePromoCampaign] = useState<any>(null);
+
   // Modo real é ativado somente se openNdsParams.isRealMode for true E houver authUrl válida
   const isRealMode = Boolean(openNdsParams.isRealMode && authUrl);
   const isDemoMode = !isRealMode;
@@ -306,9 +313,46 @@ export function SuccessOffer({ settings, visitorId, visitorName, authUrl, openNd
     };
   }, [authUrl, isDemoMode]);
 
+  // Carrega campanhas dinâmicas assim que o Wi-Fi for autorizado
+  useEffect(() => {
+    let isMounted = true;
+    if (authState === 'AUTHORIZED') {
+      const getCampaigns = async () => {
+        try {
+          const res = await fetch(`/api/portal/campaigns?visitorId=${visitorId || ''}&isDemo=${isDemoMode}`);
+          if (res.ok && isMounted) {
+            const data = await res.json();
+            const list = data.campaigns || [];
+
+            const couponCamp = list.find((c: any) => c.type === 'COUPON');
+            if (couponCamp) {
+              setActiveCouponCampaign(couponCamp);
+              sendVisitorEvent('CAMPAIGN_VIEWED', { visitor_id: visitorId, campaign_id: couponCamp.id });
+            }
+
+            const promoCamp = list.find((c: any) => c.type === 'PROMO');
+            if (promoCamp) {
+              setActivePromoCampaign(promoCamp);
+              sendVisitorEvent('CAMPAIGN_VIEWED', { visitor_id: visitorId, campaign_id: promoCamp.id });
+            }
+          }
+        } catch (err) {
+          console.warn('Erro ao carregar campanhas dinâmicas:', err);
+        }
+      };
+      getCampaigns();
+    }
+    return () => {
+      isMounted = false;
+    };
+  }, [authState, visitorId, isDemoMode]);
+
   useEffect(() => {
     if (authState === 'AUTHORIZED') {
-      if (settings.post_signup_action === 'BANNER' && settings.post_signup_banner_enabled !== false) {
+      if (
+        (activePromoCampaign && settings.post_signup_banner_enabled !== false) ||
+        (!activePromoCampaign && settings.post_signup_action === 'BANNER' && settings.post_signup_banner_enabled !== false)
+      ) {
         setBannerVisible(true);
       }
 
@@ -317,7 +361,7 @@ export function SuccessOffer({ settings, visitorId, visitorName, authUrl, openNd
         setTimeLeft(delay);
       }
     }
-  }, [authState, settings]);
+  }, [authState, settings, activePromoCampaign]);
 
   const isValidUrl = (url?: string | null): boolean => {
     if (!url) return false;
@@ -325,6 +369,9 @@ export function SuccessOffer({ settings, visitorId, visitorName, authUrl, openNd
   };
 
   const getRedirectUrl = () => {
+    if (activePromoCampaign?.button_url) {
+      return activePromoCampaign.button_url;
+    }
     switch (settings.post_signup_action) {
       case 'INSTAGRAM': return settings.instagram_url;
       case 'MENU': return settings.menu_url;
@@ -338,6 +385,12 @@ export function SuccessOffer({ settings, visitorId, visitorName, authUrl, openNd
 
   const handleMarketingRedirect = () => {
     const url = getRedirectUrl();
+    if (activePromoCampaign) {
+      sendVisitorEvent('CAMPAIGN_CLICKED', {
+        visitor_id: visitorId,
+        campaign_id: activePromoCampaign.id,
+      });
+    }
     if (isValidUrl(url) && typeof window !== 'undefined') {
       window.location.href = url!;
     } else if (isValidUrl(openNdsParams.redir) && typeof window !== 'undefined') {
@@ -358,13 +411,29 @@ export function SuccessOffer({ settings, visitorId, visitorName, authUrl, openNd
     }, 1000);
 
     return () => clearInterval(timer);
-  }, [timeLeft]);
+  }, [timeLeft, activePromoCampaign]);
 
-  const handleCopyCoupon = () => {
-    if (settings.promo_coupon_code) {
-      navigator.clipboard.writeText(settings.promo_coupon_code);
-      setCopied(true);
-      setTimeout(() => setCopied(false), 3000);
+  const handleCopyCoupon = async (code: string, campaignId?: string, couponId?: string) => {
+    navigator.clipboard.writeText(code);
+    setCopied(true);
+    setTimeout(() => setCopied(false), 3000);
+
+    sendVisitorEvent('COUPON_COPIED', {
+      visitor_id: visitorId,
+      campaign_id: campaignId || null,
+      metadata: { coupon_code: code }
+    });
+
+    if (couponId && visitorId && visitorId !== 'v-demo-visitor') {
+      try {
+        await fetch('/api/portal/campaigns', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ coupon_id: couponId, visitor_id: visitorId }),
+        });
+      } catch (err) {
+        console.warn('Erro ao salvar resgate no banco:', err);
+      }
     }
   };
 
@@ -412,14 +481,24 @@ export function SuccessOffer({ settings, visitorId, visitorName, authUrl, openNd
           </p>
         </div>
 
-        {settings.post_signup_action === 'COUPON' && settings.promo_coupon_code && (
+        {/* CUPOM DINÂMICO (PRIORITÁRIO) OU ESTÁTICO (FALLBACK) */}
+        {activeCouponCampaign ? (
           <div className="bg-gradient-to-br from-emerald-50 to-teal-50 border border-emerald-200 rounded-2xl p-4 text-center mt-4">
-             <span className="text-[10px] uppercase font-bold tracking-wider text-emerald-600 block mb-1">CUPOM DE DESCONTO</span>
+             <span className="text-[10px] uppercase font-bold tracking-wider text-emerald-600 block mb-1">
+               {activeCouponCampaign.title || 'CUPOM DE DESCONTO'}
+             </span>
+             {activeCouponCampaign.description && (
+               <p className="text-[11px] text-slate-500 mb-2">{activeCouponCampaign.description}</p>
+             )}
              <span className="font-mono font-extrabold text-slate-900 text-2xl tracking-wider block mb-3">
-               {settings.promo_coupon_code}
+               {activeCouponCampaign.coupons?.[0]?.code}
              </span>
              <button
-                onClick={handleCopyCoupon}
+                onClick={() => handleCopyCoupon(
+                  activeCouponCampaign.coupons?.[0]?.code,
+                  activeCouponCampaign.id,
+                  activeCouponCampaign.coupons?.[0]?.id
+                )}
                 className="w-full py-3 bg-emerald-100 hover:bg-emerald-200 text-emerald-800 rounded-xl text-sm font-bold transition-all flex items-center justify-center gap-2 border border-emerald-300"
               >
                 {copied ? (
@@ -429,9 +508,57 @@ export function SuccessOffer({ settings, visitorId, visitorName, authUrl, openNd
                 )}
               </button>
           </div>
-        )}
+        ) : settings.post_signup_action === 'COUPON' && settings.promo_coupon_code ? (
+          <div className="bg-gradient-to-br from-emerald-50 to-teal-50 border border-emerald-200 rounded-2xl p-4 text-center mt-4">
+             <span className="text-[10px] uppercase font-bold tracking-wider text-emerald-600 block mb-1">CUPOM DE DESCONTO</span>
+             <span className="font-mono font-extrabold text-slate-900 text-2xl tracking-wider block mb-3">
+               {settings.promo_coupon_code}
+             </span>
+             <button
+                onClick={() => handleCopyCoupon(settings.promo_coupon_code)}
+                className="w-full py-3 bg-emerald-100 hover:bg-emerald-200 text-emerald-800 rounded-xl text-sm font-bold transition-all flex items-center justify-center gap-2 border border-emerald-300"
+              >
+                {copied ? (
+                  <><Check className="w-4 h-4" /> Copiado!</>
+                ) : (
+                  <><Copy className="w-4 h-4" /> Copiar Cupom</>
+                )}
+              </button>
+          </div>
+        ) : null}
 
-        {settings.post_signup_action === 'PROMO' && settings.post_signup_promo_image_url && (
+        {/* PROMOÇÃO/BANNER DINÂMICA (PRIORITÁRIA) OU ESTÁTICA (FALLBACK) */}
+        {activePromoCampaign ? (
+          <div className="w-full bg-slate-50 border border-slate-200 rounded-2xl overflow-hidden shadow-sm mt-4">
+            {activePromoCampaign.media_url && (
+              <div 
+                className="w-full bg-slate-100 relative overflow-hidden" 
+                style={{
+                  aspectRatio: activePromoCampaign.aspect_ratio === '9:16' ? '9/16' 
+                    : activePromoCampaign.aspect_ratio === '1:1' ? '1/1'
+                    : activePromoCampaign.aspect_ratio === '16:9' ? '16/9'
+                    : '4/5',
+                  maxHeight: '40vh'
+                }}
+              >
+                <img src={activePromoCampaign.media_url} alt="Promoção" className="w-full h-full object-cover" />
+              </div>
+            )}
+            
+            <div className="p-4 text-left">
+              <h3 className="font-bold text-sm text-slate-900 mb-1">{activePromoCampaign.title}</h3>
+              {activePromoCampaign.description && <p className="text-xs text-slate-600 mb-3">{activePromoCampaign.description}</p>}
+              {activePromoCampaign.button_text && (
+                <button 
+                  onClick={handleMarketingRedirect}
+                  className="w-full py-2.5 rounded-lg bg-blue-50 hover:bg-blue-100 text-blue-700 text-xs font-bold transition-colors border border-blue-200"
+                >
+                  {activePromoCampaign.button_text}
+                </button>
+              )}
+            </div>
+          </div>
+        ) : settings.post_signup_action === 'PROMO' && settings.post_signup_promo_image_url ? (
           <div className="w-full bg-slate-50 border border-slate-200 rounded-2xl overflow-hidden shadow-sm mt-4">
             <div 
               className="w-full bg-slate-100 relative overflow-hidden" 
@@ -452,11 +579,7 @@ export function SuccessOffer({ settings, visitorId, visitorName, authUrl, openNd
                 {settings.post_signup_promo_description && <p className="text-xs text-slate-600 mb-3">{settings.post_signup_promo_description}</p>}
                 {settings.post_signup_promo_button_text && (
                   <button 
-                    onClick={() => {
-                      if (settings.post_signup_promo_button_url) {
-                        window.location.href = settings.post_signup_promo_button_url;
-                      }
-                    }}
+                    onClick={handleMarketingRedirect}
                     className="w-full py-2.5 rounded-lg bg-blue-50 hover:bg-blue-100 text-blue-700 text-xs font-bold transition-colors border border-blue-200"
                   >
                     {settings.post_signup_promo_button_text}
@@ -465,7 +588,7 @@ export function SuccessOffer({ settings, visitorId, visitorName, authUrl, openNd
               </div>
             )}
           </div>
-        )}
+        ) : null}
 
         <SecondaryActions settings={settings} visitorId={visitorId} />
 
@@ -481,6 +604,7 @@ export function SuccessOffer({ settings, visitorId, visitorName, authUrl, openNd
       <PromoBanner
         visible={bannerVisible}
         settings={settings}
+        activePromoCampaign={activePromoCampaign}
         timeLeft={timeLeft}
         primaryColor={primaryColor}
         onCancel={cancelRedirect}
