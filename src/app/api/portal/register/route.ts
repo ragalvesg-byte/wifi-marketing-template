@@ -12,19 +12,79 @@ export async function POST(request: Request) {
   try {
     const body: RegisterVisitorPayload = await request.json();
     const cleanPhone = cleanPhoneNumber(body.phone || '');
-
-    // Rate Limiting básico (5 requests per minute per IP)
     const ip = request.headers.get('x-forwarded-for') || '127.0.0.1';
+
+    let supabase;
+    try {
+      supabase = createAdminClient();
+    } catch (e) {
+      console.warn('Rodando em modo demonstração: ', e);
+    }
+    const isDemo = !supabase;
+
+    // 1. In-memory rate limiting (original)
     const now = Date.now();
     const rateData = rateLimitMap.get(ip);
+    let inMemoryBlock = false;
 
     if (rateData && now < rateData.resetAt) {
       if (rateData.count >= 5) {
-        return NextResponse.json({ error: 'Muitas requisições. Tente novamente mais tarde.' }, { status: 429 });
+        inMemoryBlock = true;
       }
       rateData.count++;
     } else {
       rateLimitMap.set(ip, { count: 1, resetAt: now + 60000 });
+    }
+
+    // 2. Persistent rate limiting (parallel execution)
+    let persistentBlock = false;
+    if (supabase) {
+      try {
+        // Exclui entradas expiradas de rate limit
+        await supabase
+          .from('rate_limits')
+          .delete()
+          .lt('reset_at', new Date().toISOString());
+
+        const { data: limitData, error: limitError } = await supabase
+          .from('rate_limits')
+          .select('*')
+          .eq('ip', ip)
+          .single();
+
+        const nowIso = new Date().toISOString();
+        if (limitData && nowIso < limitData.reset_at) {
+          if (limitData.count >= 5) {
+            persistentBlock = true;
+          }
+          await supabase
+            .from('rate_limits')
+            .update({
+              count: limitData.count + 1,
+              updated_at: nowIso
+            })
+            .eq('ip', ip);
+        } else {
+          await supabase
+            .from('rate_limits')
+            .upsert({
+              ip,
+              count: 1,
+              reset_at: new Date(Date.now() + 60000).toISOString(),
+              updated_at: nowIso
+            }, { onConflict: 'ip' });
+        }
+      } catch (err) {
+        console.warn('Erro ao processar rate limit persistente no Supabase (caindo de volta para in-memory):', err);
+      }
+    }
+
+    // Registra comparação para fins de auditoria/teste
+    console.log(`[Rate Limit] IP: ${ip} | InMemory Blocked: ${inMemoryBlock} | Persistent Blocked: ${persistentBlock}`);
+
+    // Bloqueia com base no inMemoryBlock conforme instrução de transição (Não remova o rate limit atual até o novo estar testado)
+    if (inMemoryBlock) {
+      return NextResponse.json({ error: 'Muitas requisições. Tente novamente mais tarde.' }, { status: 429 });
     }
 
     if (!cleanPhone || cleanPhone.length < 10) {
@@ -37,14 +97,6 @@ export async function POST(request: Request) {
 
     const rawMac = body.mac_address;
     const validMac = isValidMac(rawMac) ? rawMac!.toLowerCase() : null;
-
-    let supabase;
-    try {
-      supabase = createAdminClient();
-    } catch (e) {
-      console.warn('Rodando em modo demonstração: ', e);
-    }
-    const isDemo = !supabase;
 
     let visitorId: string = 'v-demo-visitor';
     let totalVisits = 1;
