@@ -9,12 +9,14 @@ interface ImageUploaderProps {
   onChange: (url: string) => void;
   folder?: string;
   label?: string;
+  disableUrlInput?: boolean;
 }
 
-export function ImageUploader({ value, onChange, folder = 'general', label = 'Imagem' }: ImageUploaderProps) {
+export function ImageUploader({ value, onChange, folder = 'general', label = 'Imagem', disableUrlInput = false }: ImageUploaderProps) {
   const [isUploading, setIsUploading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [isAdvanced, setIsAdvanced] = useState(false);
+  const [inputId] = useState(() => 'image-input-' + Math.random().toString(36).substring(2, 9));
   const fileInputRef = useRef<HTMLInputElement>(null);
   const supabase = createClient();
 
@@ -79,7 +81,7 @@ export function ImageUploader({ value, onChange, folder = 'general', label = 'Im
 
   return (
     <div className="space-y-3">
-      <label className="block text-xs font-semibold uppercase text-slate-600">{label}</label>
+      <label className="block text-xs font-semibold uppercase text-slate-600" htmlFor={inputId}>{label}</label>
 
       {!isAdvanced ? (
         <div className="space-y-3">
@@ -128,22 +130,25 @@ export function ImageUploader({ value, onChange, folder = 'general', label = 'Im
 
           <input
             type="file"
+            id={inputId}
             ref={fileInputRef}
             onChange={handleFileChange}
             accept="image/jpeg,image/png,image/webp"
             className="hidden"
           />
 
-          <button 
-            type="button" 
-            onClick={() => {
-              setIsAdvanced(true);
-              setError(null);
-            }} 
-            className="text-[10px] text-slate-400 hover:text-slate-600 underline font-medium"
-          >
-            Usar URL externa em vez de upload
-          </button>
+          {!disableUrlInput && (
+            <button 
+              type="button" 
+              onClick={() => {
+                setIsAdvanced(true);
+                setError(null);
+              }} 
+              className="text-[10px] text-slate-400 hover:text-slate-600 underline font-medium"
+            >
+              Usar URL externa em vez de upload
+            </button>
+          )}
         </div>
       ) : (
         <div className="space-y-2">

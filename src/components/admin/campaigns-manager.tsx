@@ -8,6 +8,7 @@ import {
   Play, Pause, Copy, Pencil
 } from 'lucide-react';
 import { Campaign } from '@/types/database';
+import { ImageUploader } from './image-uploader';
 
 export function CampaignsManager() {
   const [activeTab, setActiveTab] = useState<'LIST' | 'CREATE'>('LIST');
@@ -33,7 +34,6 @@ export function CampaignsManager() {
 
   // Target State
   const [targetType, setTargetType] = useState<'ALL' | 'NEW_VISITORS' | 'RETURNING_VISITORS' | 'GENDER' | 'BIRTHDAY_MONTH'>('ALL');
-  const [genderRule, setGenderRule] = useState<'Feminino' | 'Masculino' | 'Outro'>('Feminino');
   const [birthdayMonthRule, setBirthdayMonthRule] = useState('8');
 
   // Coupon State
@@ -65,9 +65,7 @@ export function CampaignsManager() {
     const audience = campaign.campaign_audiences?.[0];
     if (audience) {
       setTargetType(audience.target_type || 'ALL');
-      if (audience.target_type === 'GENDER') {
-        setGenderRule(audience.rules?.gender || 'Feminino');
-      } else if (audience.target_type === 'BIRTHDAY_MONTH') {
+      if (audience.target_type === 'BIRTHDAY_MONTH') {
         setBirthdayMonthRule(String(audience.rules?.birthday_month || '8'));
       }
     } else {
@@ -246,7 +244,6 @@ export function CampaignsManager() {
     setStartDate('');
     setEndDate('');
     setTargetType('ALL');
-    setGenderRule('Feminino');
     setBirthdayMonthRule('8');
     setCouponCode('');
     setDiscountType('PERCENTAGE');
@@ -259,12 +256,24 @@ export function CampaignsManager() {
     e.preventDefault();
     setErrorMsg('');
     setSuccessMsg('');
+
+    // Validações obrigatórias
+    if (targetType === 'GENDER') {
+      setErrorMsg('Segmentação antiga não suportada. Por favor, escolha um critério de segmentação ativo.');
+      return;
+    }
+
+    if (mediaType === 'VIDEO' && mediaUrl) {
+      if (!mediaUrl.startsWith('https://')) {
+        setErrorMsg('O link do vídeo deve iniciar com https://.');
+        return;
+      }
+    }
+
     setSubmitting(true);
 
     const rules: Record<string, any> = {};
-    if (targetType === 'GENDER') {
-      rules.gender = genderRule;
-    } else if (targetType === 'BIRTHDAY_MONTH') {
+    if (targetType === 'BIRTHDAY_MONTH') {
       rules.birthday_month = birthdayMonthRule;
     }
 
@@ -437,8 +446,8 @@ export function CampaignsManager() {
                               {audience?.target_type === 'ALL' && 'Todos os Visitantes'}
                               {audience?.target_type === 'NEW_VISITORS' && 'Novos Visitantes'}
                               {audience?.target_type === 'RETURNING_VISITORS' && 'Visitantes Recorrentes'}
-                              {audience?.target_type === 'GENDER' && `Gênero: ${audience.rules.gender}`}
-                              {audience?.target_type === 'BIRTHDAY_MONTH' && `Aniversariantes do Mês`}
+                              {audience?.target_type === 'GENDER' && 'Segmentação antiga não suportada'}
+                              {audience?.target_type === 'BIRTHDAY_MONTH' && 'Aniversariantes do Mês'}
                             </span>
                           </div>
                         </td>
@@ -570,31 +579,62 @@ export function CampaignsManager() {
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             <div className="space-y-2">
-              <label className="block text-sm font-semibold text-slate-700 flex items-center gap-1">
-                <Image className="w-4 h-4 text-slate-400" /> URL da Imagem Promocional
-              </label>
-              <input
-                type="url"
-                placeholder="https://exemplo.com/imagem.jpg"
-                value={mediaUrl}
-                onChange={(e) => setMediaUrl(e.target.value)}
-                className="w-full px-4 py-2.5 rounded-xl border border-slate-200 focus:ring-2 focus:ring-blue-500/30 focus:outline-none text-slate-900 bg-slate-50/50 text-sm"
-              />
-            </div>
-
-            <div className="space-y-2">
-              <label className="block text-sm font-semibold text-slate-700">Proporção da Imagem</label>
+              <label className="block text-sm font-semibold text-slate-700" htmlFor="media-type-select">Tipo de Mídia *</label>
               <select
-                value={aspectRatio}
-                onChange={(e) => setAspectRatio(e.target.value as any)}
-                className="w-full px-4 py-2.5 rounded-xl border border-slate-200 focus:ring-2 focus:ring-blue-500/30 focus:outline-none text-slate-900 bg-slate-50/50 text-sm"
+                id="media-type-select"
+                value={mediaType}
+                onChange={(e) => {
+                  const val = e.target.value as 'IMAGE' | 'VIDEO';
+                  setMediaType(val);
+                  setMediaUrl(''); // Reseta URL ao mudar o tipo
+                }}
+                className="w-full px-4 py-2.5 rounded-xl border border-slate-200 focus:ring-2 focus:ring-blue-500/30 focus:outline-none text-slate-900 bg-slate-50/50 text-sm font-medium"
               >
-                <option value="4:5">Vertical (4:5)</option>
-                <option value="1:1">Quadrada (1:1)</option>
-                <option value="16:9">Horizontal (16:9)</option>
-                <option value="9:16">Story (9:16)</option>
+                <option value="IMAGE">Imagem</option>
+                <option value="VIDEO">Vídeo</option>
               </select>
             </div>
+
+            {mediaType === 'IMAGE' ? (
+              <div className="space-y-2">
+                <label className="block text-sm font-semibold text-slate-700">Proporção da Imagem</label>
+                <select
+                  value={aspectRatio}
+                  onChange={(e) => setAspectRatio(e.target.value as any)}
+                  className="w-full px-4 py-2.5 rounded-xl border border-slate-200 focus:ring-2 focus:ring-blue-500/30 focus:outline-none text-slate-900 bg-slate-50/50 text-sm"
+                >
+                  <option value="4:5">Vertical (4:5)</option>
+                  <option value="1:1">Quadrada (1:1)</option>
+                  <option value="16:9">Horizontal (16:9)</option>
+                  <option value="9:16">Story (9:16)</option>
+                </select>
+              </div>
+            ) : (
+              <div></div>
+            )}
+
+            {mediaType === 'IMAGE' ? (
+              <div className="md:col-span-2">
+                <ImageUploader
+                  value={mediaUrl}
+                  onChange={(url) => setMediaUrl(url)}
+                  folder="campaigns"
+                  label="Carregar imagem"
+                  disableUrlInput={true}
+                />
+              </div>
+            ) : (
+              <div className="md:col-span-2 space-y-2">
+                <label className="block text-sm font-semibold text-slate-700">Link do vídeo (iniciando com https://)</label>
+                <input
+                  type="url"
+                  placeholder="https://exemplo.com/video.mp4"
+                  value={mediaUrl}
+                  onChange={(e) => setMediaUrl(e.target.value)}
+                  className="w-full px-4 py-2.5 rounded-xl border border-slate-200 focus:ring-2 focus:ring-blue-500/30 focus:outline-none text-slate-900 bg-slate-50/50 text-sm"
+                />
+              </div>
+            )}
 
             <div className="space-y-2">
               <label className="block text-sm font-semibold text-slate-700">Texto do Botão de Ação</label>
@@ -626,34 +666,31 @@ export function CampaignsManager() {
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             <div className="space-y-2">
-              <label className="block text-sm font-semibold text-slate-700 flex items-center gap-1">
+              <label className="block text-sm font-semibold text-slate-700 flex items-center gap-1" htmlFor="target-type-select">
                 <Users className="w-4 h-4 text-slate-400" /> Critério de Segmentação *
               </label>
               <select
+                id="target-type-select"
                 value={targetType}
                 onChange={(e) => setTargetType(e.target.value as any)}
-                className="w-full px-4 py-2.5 rounded-xl border border-slate-200 focus:ring-2 focus:ring-blue-500/30 focus:outline-none text-slate-900 bg-slate-50/50 text-sm font-medium"
+                className={`w-full px-4 py-2.5 rounded-xl border focus:ring-2 focus:outline-none text-slate-900 bg-slate-50/50 text-sm font-medium ${targetType === 'GENDER' ? 'border-rose-300 focus:ring-rose-500/30' : 'border-slate-200 focus:ring-blue-500/30'}`}
               >
-                <option value="ALL">Todos os Visitantes</option>
-                <option value="NEW_VISITORS">Apenas Novos Visitantes (1ª visita)</option>
-                <option value="RETURNING_VISITORS">Apenas Visitantes Recorrentes</option>
-                <option value="GENDER">Segmentar por Gênero</option>
-                <option value="BIRTHDAY_MONTH">Segmentar por Mês de Aniversário</option>
+                <option value="ALL">Todos os visitantes</option>
+                <option value="NEW_VISITORS">Novos visitantes</option>
+                <option value="RETURNING_VISITORS">Visitantes recorrentes</option>
+                <option value="BIRTHDAY_MONTH">Aniversariantes do mês</option>
+                {targetType === 'GENDER' && (
+                  <option value="GENDER" disabled>Segmentação antiga não suportada</option>
+                )}
               </select>
             </div>
 
             {targetType === 'GENDER' && (
-              <div className="space-y-2">
-                <label className="block text-sm font-semibold text-slate-700">Selecione o Gênero</label>
-                <select
-                  value={genderRule}
-                  onChange={(e) => setGenderRule(e.target.value as any)}
-                  className="w-full px-4 py-2.5 rounded-xl border border-slate-200 focus:ring-2 focus:ring-blue-500/30 focus:outline-none text-slate-900 bg-slate-50/50 text-sm"
-                >
-                  <option value="Feminino">Feminino</option>
-                  <option value="Masculino">Masculino</option>
-                  <option value="Outro">Outro / Não especificado</option>
-                </select>
+              <div className="md:col-span-2 p-4 bg-rose-50 border border-rose-200 text-rose-800 rounded-xl text-sm flex items-start gap-2.5">
+                <AlertCircle className="w-5 h-5 text-rose-600 shrink-0 mt-0.5" />
+                <div>
+                  <span className="font-bold">Segmentação antiga não suportada.</span> Por favor, escolha um critério de segmentação ativo (Todos os visitantes, Novos visitantes, Visitantes recorrentes ou Aniversariantes do mês) para salvar.
+                </div>
               </div>
             )}
 
