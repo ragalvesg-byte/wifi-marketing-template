@@ -41,34 +41,6 @@ CREATE TABLE IF NOT EXISTS store_settings (
   field_city_required BOOLEAN DEFAULT FALSE,
   field_gender_required BOOLEAN DEFAULT FALSE,
 
-  -- Jornada do Visitante: Antes do Cadastro
-  pre_signup_enabled BOOLEAN DEFAULT TRUE,
-  pre_signup_show_banner BOOLEAN DEFAULT TRUE,
-  pre_signup_show_promo BOOLEAN DEFAULT TRUE,
-  pre_signup_show_instagram BOOLEAN DEFAULT TRUE,
-  pre_signup_show_menu BOOLEAN DEFAULT TRUE,
-  pre_signup_show_google_review BOOLEAN DEFAULT TRUE,
-
-  -- Jornada do Visitante: Depois do Cadastro
-  post_signup_action VARCHAR(50) DEFAULT 'SHOW_MESSAGE', -- COUPON, PROMO, BANNER, MENU, INSTAGRAM, GOOGLE, CUSTOM_URL, SHOW_MESSAGE
-  post_signup_banner_enabled BOOLEAN DEFAULT FALSE,
-  post_signup_banner_closable BOOLEAN DEFAULT TRUE,
-  post_signup_title VARCHAR(255) DEFAULT 'Internet liberada!',
-  post_signup_message TEXT DEFAULT 'Aproveite sua conexão. Obrigado por nos visitar!',
-  post_signup_url TEXT,
-  post_signup_promo_image_url TEXT,
-  post_signup_promo_title VARCHAR(255),
-  post_signup_promo_description TEXT,
-  post_signup_promo_button_text VARCHAR(255),
-  post_signup_promo_button_url TEXT,
-  post_signup_promo_image_aspect_ratio VARCHAR(10) DEFAULT '4:5', -- 9:16, 4:5, 1:1, 16:9
-  post_signup_redirect_mode VARCHAR(50) DEFAULT 'NONE', -- NONE, AUTO_3S, AUTO_5S, AUTO_10S, ON_CLICK
-  post_signup_redirect_seconds INT DEFAULT 3,
-  post_signup_show_coupon BOOLEAN DEFAULT FALSE,
-  post_signup_show_instagram BOOLEAN DEFAULT FALSE,
-  post_signup_show_menu BOOLEAN DEFAULT FALSE,
-  post_signup_show_google_review BOOLEAN DEFAULT FALSE,
-
   -- Regras de Recadastro e Termos
   relogin_days_interval INT DEFAULT 7,
   terms_of_service TEXT DEFAULT 'Ao se conectar, você concorda com os termos de uso do serviço de acesso à internet fornecido por este estabelecimento.',
