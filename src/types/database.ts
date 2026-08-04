@@ -57,6 +57,7 @@ export interface StoreSettings {
   field_gender_required?: boolean;
 
   // Jornada do Visitante: Depois do Cadastro
+  /** @legacy COUPON mantido apenas para compatibilidade com dados existentes. Novas configurações não devem usar COUPON. */
   post_signup_action?: 'COUPON' | 'PROMO' | 'BANNER' | 'MENU' | 'INSTAGRAM' | 'GOOGLE' | 'CUSTOM_URL' | 'SHOW_MESSAGE';
   post_signup_banner_enabled?: boolean;
   post_signup_banner_closable?: boolean;
@@ -71,6 +72,7 @@ export interface StoreSettings {
   post_signup_promo_image_aspect_ratio?: '9:16' | '4:5' | '1:1' | '16:9';
   post_signup_redirect_mode?: 'NONE' | 'AUTO_3S' | 'AUTO_5S' | 'AUTO_10S' | 'ON_CLICK';
   post_signup_redirect_seconds?: number;
+  /** @legacy Campo mantido para compatibilidade. O portal ignora este campo. */
   post_signup_show_coupon?: boolean;
   post_signup_show_instagram?: boolean;
   post_signup_show_menu?: boolean;
@@ -172,8 +174,8 @@ export type VisitorEventType =
   | 'GOOGLE_REVIEW_CLICKED'
   | 'CAMPAIGN_VIEWED'
   | 'CAMPAIGN_CLICKED'
-  | 'COUPON_COPIED'
-  | 'COUPON_REDEEMED';
+  | 'COUPON_COPIED'   // @legacy — não gerar novos eventos deste tipo
+  | 'COUPON_REDEEMED'; // @legacy — não gerar novos eventos deste tipo
 
 export interface VisitorEvent {
   id?: string;
@@ -190,7 +192,8 @@ export interface Campaign {
   id: string;
   title: string;
   description?: string | null;
-  type: 'PROMO' | 'COUPON' | 'BANNER' | 'SURVEY';
+  /** COUPON mantido como tipo legado para leitura/migração. Novas campanhas devem usar PROMO, BANNER, SURVEY ou EVENT. */
+  type: 'PROMO' | 'COUPON' | 'BANNER' | 'SURVEY' | 'EVENT';
   status: 'DRAFT' | 'ACTIVE' | 'PAUSED' | 'EXPIRED';
   media_url?: string | null;
   media_type?: 'IMAGE' | 'VIDEO' | null;
@@ -211,6 +214,7 @@ export interface CampaignAudience {
   created_at?: string;
 }
 
+/** @legacy Interface mantida para compatibilidade com dados existentes. Não criar novos registros. */
 export interface Coupon {
   id: string;
   campaign_id?: string | null;
@@ -223,6 +227,7 @@ export interface Coupon {
   created_at?: string;
 }
 
+/** @legacy Interface mantida para compatibilidade com dados existentes. Não criar novos registros. */
 export interface CouponRedemption {
   id: string;
   coupon_id: string;

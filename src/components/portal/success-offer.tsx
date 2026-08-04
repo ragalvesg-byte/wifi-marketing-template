@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { StoreSettings, OpenNdsParams } from '@/types/database';
-import { CheckCircle2, Copy, Check, ExternalLink, Star, Camera, Utensils, Loader2, AlertCircle, X, Wifi, WifiOff } from 'lucide-react';
+import { CheckCircle2, ExternalLink, Star, Camera, Utensils, Loader2, AlertCircle, X, Wifi, WifiOff } from 'lucide-react';
 import { sendVisitorEvent } from '@/lib/events';
 
 interface SuccessOfferProps {
@@ -262,13 +262,11 @@ export function SecondaryActions({ settings, visitorId }: SecondaryActionsProps)
 // ==========================================
 
 export function SuccessOffer({ settings, visitorId, visitorName, authUrl, openNdsParams }: SuccessOfferProps) {
-  const [copied, setCopied] = useState(false);
   const [authState, setAuthState] = useState<'AUTHORIZING' | 'AUTHORIZED' | 'FAILED'>('AUTHORIZING');
   const [bannerVisible, setBannerVisible] = useState(false);
   const [timeLeft, setTimeLeft] = useState<number | null>(null);
 
   // Estados de Campanhas Dinâmicas
-  const [activeCouponCampaign, setActiveCouponCampaign] = useState<any>(null);
   const [activePromoCampaign, setActivePromoCampaign] = useState<any>(null);
   const [loadingCampaigns, setLoadingCampaigns] = useState(true);
 
@@ -324,13 +322,8 @@ export function SuccessOffer({ settings, visitorId, visitorName, authUrl, openNd
           const data = await res.json();
           const list = data.campaigns || [];
 
-          const couponCamp = list.find((c: any) => c.type === 'COUPON');
-          if (couponCamp) {
-            setActiveCouponCampaign(couponCamp);
-            sendVisitorEvent('CAMPAIGN_VIEWED', { visitor_id: visitorId, campaign_id: couponCamp.id });
-          }
-
-          const promoCamp = list.find((c: any) => c.type === 'PROMO');
+          // Campanhas COUPON legadas são tratadas como PROMO no portal
+          const promoCamp = list.find((c: any) => c.type === 'PROMO' || c.type === 'COUPON');
           if (promoCamp) {
             setActivePromoCampaign(promoCamp);
             sendVisitorEvent('CAMPAIGN_VIEWED', { visitor_id: visitorId, campaign_id: promoCamp.id });
@@ -422,30 +415,6 @@ export function SuccessOffer({ settings, visitorId, visitorName, authUrl, openNd
     return () => clearInterval(timer);
   }, [timeLeft, activePromoCampaign]);
 
-  const handleCopyCoupon = async (code: string, campaignId?: string, couponId?: string) => {
-    navigator.clipboard.writeText(code);
-    setCopied(true);
-    setTimeout(() => setCopied(false), 3000);
-
-    sendVisitorEvent('COUPON_COPIED', {
-      visitor_id: visitorId,
-      campaign_id: campaignId || null,
-      metadata: { coupon_code: code }
-    });
-
-    if (couponId && visitorId && visitorId !== 'v-demo-visitor') {
-      try {
-        await fetch('/api/portal/campaigns', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ coupon_id: couponId, visitor_id: visitorId }),
-        });
-      } catch (err) {
-        console.warn('Erro ao salvar resgate no banco:', err);
-      }
-    }
-  };
-
   const cancelRedirect = () => {
     setTimeLeft(null);
     setBannerVisible(false);
@@ -501,60 +470,7 @@ export function SuccessOffer({ settings, visitorId, visitorName, authUrl, openNd
           </p>
         </div>
 
-        {/* CAMPANHA DE CUPOM DINÂMICO */}
-        {activeCouponCampaign && (
-          <div className="bg-gradient-to-br from-emerald-50 to-teal-50 border border-emerald-200 rounded-2xl p-4 text-center mt-4">
-             <span className="text-[10px] uppercase font-bold tracking-wider text-emerald-600 block mb-1">
-               {activeCouponCampaign.title || 'CUPOM DE DESCONTO'}
-             </span>
-             {activeCouponCampaign.description && (
-               <p className="text-[11px] text-slate-500 mb-2">{activeCouponCampaign.description}</p>
-             )}
-             <span className="font-mono font-extrabold text-slate-900 text-2xl tracking-wider block mb-3">
-               {activeCouponCampaign.coupons?.[0]?.code}
-             </span>
-             <button
-                onClick={() => handleCopyCoupon(
-                  activeCouponCampaign.coupons?.[0]?.code,
-                  activeCouponCampaign.id,
-                  activeCouponCampaign.coupons?.[0]?.id
-                )}
-                className="w-full py-3 bg-emerald-100 hover:bg-emerald-200 text-emerald-800 rounded-xl text-sm font-bold transition-all flex items-center justify-center gap-2 border border-emerald-300"
-              >
-                {copied ? (
-                  <><Check className="w-4 h-4" /> Copiado!</>
-                ) : (
-                  <><Copy className="w-4 h-4" /> Copiar Cupom</>
-                )}
-              </button>
-          </div>
-        )}
-
-        {/* CUPOM ESTÁTICO (EXIBIDO SE:
-            1. NÃO HOUVER CUPOM DINÂMICO, E (ACTION FOR COUPON OU SHOW_COUPON FOR ATIVO)
-            OU
-            2. HOUVER CUPOM DINÂMICO, MAS SHOW_COUPON FOR EXPLICITAMENTE ATIVO) */}
-        {settings.promo_coupon_code && (
-          (!activeCouponCampaign && (settings.post_signup_action === 'COUPON' || settings.post_signup_show_coupon)) ||
-          (activeCouponCampaign && settings.post_signup_show_coupon)
-        ) ? (
-          <div className="bg-gradient-to-br from-emerald-50 to-teal-50 border border-emerald-200 rounded-2xl p-4 text-center mt-4">
-             <span className="text-[10px] uppercase font-bold tracking-wider text-emerald-600 block mb-1">CUPOM DE DESCONTO</span>
-             <span className="font-mono font-extrabold text-slate-900 text-2xl tracking-wider block mb-3">
-               {settings.promo_coupon_code}
-             </span>
-             <button
-                onClick={() => handleCopyCoupon(settings.promo_coupon_code)}
-                className="w-full py-3 bg-emerald-100 hover:bg-emerald-200 text-emerald-800 rounded-xl text-sm font-bold transition-all flex items-center justify-center gap-2 border border-emerald-300"
-              >
-                {copied ? (
-                  <><Check className="w-4 h-4" /> Copiado!</>
-                ) : (
-                  <><Copy className="w-4 h-4" /> Copiar Cupom</>
-                )}
-              </button>
-          </div>
-        ) : null}
+        {/* CUPOM DINÂMICO E ESTÁTICO REMOVIDOS — sistema de oferta presencial */}
 
         {/* PROMOÇÃO/BANNER DINÂMICA (PRIORITÁRIA) OU ESTÁTICA (FALLBACK) */}
         {activePromoCampaign ? (
@@ -577,13 +493,17 @@ export function SuccessOffer({ settings, visitorId, visitorName, authUrl, openNd
             <div className="p-4 text-left">
               <h3 className="font-bold text-sm text-slate-900 mb-1">{activePromoCampaign.title}</h3>
               {activePromoCampaign.description && <p className="text-xs text-slate-600 mb-3">{activePromoCampaign.description}</p>}
-              {activePromoCampaign.button_text && (
+              {activePromoCampaign.button_text && activePromoCampaign.button_url ? (
                 <button 
                   onClick={handleMarketingRedirect}
                   className="w-full py-2.5 rounded-lg bg-blue-50 hover:bg-blue-100 text-blue-700 text-xs font-bold transition-colors border border-blue-200"
                 >
                   {activePromoCampaign.button_text}
                 </button>
+              ) : (
+                <div className="w-full py-3 bg-amber-50 border border-amber-200 text-amber-800 rounded-xl text-xs font-semibold text-center">
+                  📋 Apresente esta tela ao atendente para receber a oferta.
+                </div>
               )}
             </div>
           </div>

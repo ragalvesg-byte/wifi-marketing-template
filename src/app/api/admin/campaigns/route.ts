@@ -1,19 +1,19 @@
 import { NextResponse } from 'next/server';
 import { createServerClientInstance } from '@/lib/supabase/server';
-import { Campaign, CampaignAudience, Coupon } from '@/types/database';
+import { Campaign, CampaignAudience } from '@/types/database';
 
 // Armazenamento em memória para demonstração/desenvolvimento local (caso Supabase não esteja disponível)
 let mockCampaigns: any[] = [
   {
     id: 'campaign-1',
-    title: 'Ganhe 15% na sua próxima Pizza!',
-    description: 'Promoção exclusiva de boas-vindas para novos clientes.',
-    type: 'COUPON',
+    title: 'Ganhe uma sobremesa de boas-vindas!',
+    description: 'Promoção exclusiva de boas-vindas para novos clientes. Apresente esta tela ao atendente.',
+    type: 'PROMO',
     status: 'ACTIVE',
     media_url: 'https://images.unsplash.com/photo-1513104890138-7c749659a591',
     media_type: 'IMAGE',
     aspect_ratio: '4:5',
-    button_text: 'Copiar Cupom de 15%',
+    button_text: null,
     button_url: null,
     start_date: new Date().toISOString(),
     end_date: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString(),
@@ -23,17 +23,6 @@ let mockCampaigns: any[] = [
         campaign_id: 'campaign-1',
         target_type: 'NEW_VISITORS',
         rules: {},
-      }
-    ],
-    coupons: [
-      {
-        id: 'coupon-1',
-        campaign_id: 'campaign-1',
-        code: 'PIZZA15',
-        discount_type: 'PERCENTAGE',
-        discount_value: 15.00,
-        max_redemptions: 100,
-        current_redemptions: 5,
       }
     ]
   },
@@ -74,7 +63,7 @@ export async function GET() {
   }
 
   try {
-    // Busca campanhas com públicos e cupons associados
+    // Busca campanhas com públicos associados (coupons mantidos no select para campanhas legadas)
     const { data: campaigns, error } = await supabase
       .from('campaigns')
       .select(`
@@ -116,17 +105,15 @@ export async function POST(request: Request) {
       // Target
       target_type = 'ALL',
       rules = {},
-      // Coupon
-      coupon_code,
-      discount_type = 'PERCENTAGE',
-      discount_value = 0,
-      max_redemptions = null,
-      expires_at = null,
+      // Campos legados de cupom são ignorados silenciosamente
     } = body;
 
     if (!title || !type) {
       return NextResponse.json({ error: 'Título e tipo de campanha são obrigatórios.' }, { status: 400 });
     }
+
+    // Rejeita criação de campanhas do tipo COUPON (legado)
+    const effectiveType = type === 'COUPON' ? 'PROMO' : type;
 
     if (!supabase) {
       // Simula inserção em memória no modo demonstração
@@ -135,7 +122,7 @@ export async function POST(request: Request) {
         id: newCampaignId,
         title,
         description,
-        type,
+        type: effectiveType,
         status,
         media_url,
         media_type,
@@ -156,21 +143,6 @@ export async function POST(request: Request) {
         ]
       };
 
-      if (type === 'COUPON' && coupon_code) {
-        newCampaign.coupons = [
-          {
-            id: 'coupon-' + Math.random().toString(36).substring(2, 9),
-            campaign_id: newCampaignId,
-            code: coupon_code.toUpperCase(),
-            discount_type,
-            discount_value,
-            max_redemptions,
-            current_redemptions: 0,
-            expires_at,
-          }
-        ];
-      }
-
       mockCampaigns = [newCampaign, ...mockCampaigns];
       return NextResponse.json({ success: true, isDemo: true, campaign: newCampaign });
     }
@@ -180,14 +152,14 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: 'Não autorizado' }, { status: 401 });
     }
 
-    // Operações sequenciais (não atômicas) usando múltiplos inserts com rollback de compensação manual via supabase client
+    // Operações sequenciais (não atômicas) — campanha + audiência
     // 1. Inserir Campanha
     const { data: campaign, error: campaignError } = await supabase
       .from('campaigns')
       .insert({
         title,
         description,
-        type,
+        type: effectiveType,
         status,
         media_url,
         media_type,
@@ -221,26 +193,7 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: 'Erro ao salvar regras de público-alvo.' }, { status: 500 });
     }
 
-    // 3. Inserir Cupom se aplicável
-    if (type === 'COUPON' && coupon_code) {
-      const { error: couponError } = await supabase
-        .from('coupons')
-        .insert({
-          campaign_id: campaign.id,
-          code: coupon_code.trim().toUpperCase(),
-          discount_type,
-          discount_value,
-          max_redemptions: max_redemptions || null,
-          expires_at: expires_at || null,
-        });
-
-      if (couponError) {
-        console.error('Erro ao salvar cupom:', couponError);
-        // Apaga campanha e público para manter integridade
-        await supabase.from('campaigns').delete().eq('id', campaign.id);
-        return NextResponse.json({ error: 'Erro ao salvar cupom no banco (código duplicado ou inválido).' }, { status: 500 });
-      }
-    }
+    // Cupom NÃO é mais criado — sistema de oferta presencial
 
     return NextResponse.json({ success: true, isDemo: false, campaignId: campaign.id });
   } catch (err) {
@@ -308,12 +261,7 @@ export async function PUT(request: Request) {
       // Target
       target_type = 'ALL',
       rules = {},
-      // Coupon
-      coupon_code,
-      discount_type = 'PERCENTAGE',
-      discount_value = 0,
-      max_redemptions = null,
-      expires_at = null,
+      // Campos legados de cupom são ignorados silenciosamente
     } = body;
 
     if (!id) {
@@ -323,6 +271,9 @@ export async function PUT(request: Request) {
     if (!title || !type) {
       return NextResponse.json({ error: 'Título e tipo de campanha são obrigatórios.' }, { status: 400 });
     }
+
+    // Converte COUPON legado para PROMO ao salvar
+    const effectiveType = type === 'COUPON' ? 'PROMO' : type;
 
     if (!supabase) {
       // Modo de demonstração em memória
@@ -335,7 +286,7 @@ export async function PUT(request: Request) {
         ...mockCampaigns[index],
         title,
         description,
-        type,
+        type: effectiveType,
         status,
         media_url,
         media_type,
@@ -354,23 +305,6 @@ export async function PUT(request: Request) {
           }
         ]
       };
-
-      if (type === 'COUPON' && coupon_code) {
-        updatedCampaign.coupons = [
-          {
-            id: mockCampaigns[index].coupons?.[0]?.id || 'coupon-' + Math.random().toString(36).substring(2, 9),
-            campaign_id: id,
-            code: coupon_code.toUpperCase(),
-            discount_type,
-            discount_value,
-            max_redemptions: max_redemptions ? parseInt(String(max_redemptions), 10) : null,
-            current_redemptions: mockCampaigns[index].coupons?.[0]?.current_redemptions || 0,
-            expires_at,
-          }
-        ];
-      } else {
-        delete updatedCampaign.coupons;
-      }
 
       mockCampaigns[index] = updatedCampaign;
       return NextResponse.json({ success: true, isDemo: true, campaign: updatedCampaign });
@@ -395,12 +329,6 @@ export async function PUT(request: Request) {
 
     const { data: prevAudience } = await supabase
       .from('campaign_audiences')
-      .select('*')
-      .eq('campaign_id', id)
-      .maybeSingle();
-
-    const { data: prevCoupon } = await supabase
-      .from('coupons')
       .select('*')
       .eq('campaign_id', id)
       .maybeSingle();
@@ -441,43 +369,6 @@ export async function PUT(request: Request) {
             .eq('campaign_id', id);
         }
 
-        // Reverte alteração de cupom
-        if (prevCoupon) {
-          const { data: currentCoupon } = await supabase
-            .from('coupons')
-            .select('id')
-            .eq('campaign_id', id)
-            .maybeSingle();
-
-          if (currentCoupon) {
-            await supabase
-              .from('coupons')
-              .update({
-                code: prevCoupon.code,
-                discount_type: prevCoupon.discount_type,
-                discount_value: prevCoupon.discount_value,
-                max_redemptions: prevCoupon.max_redemptions,
-                expires_at: prevCoupon.expires_at,
-              })
-              .eq('campaign_id', id);
-          } else {
-            await supabase
-              .from('coupons')
-              .insert({
-                campaign_id: id,
-                code: prevCoupon.code,
-                discount_type: prevCoupon.discount_type,
-                discount_value: prevCoupon.discount_value,
-                max_redemptions: prevCoupon.max_redemptions,
-                expires_at: prevCoupon.expires_at,
-              });
-          }
-        } else {
-          await supabase
-            .from('coupons')
-            .delete()
-            .eq('campaign_id', id);
-        }
         console.log(`[Rollback] Reversão manual concluída com sucesso para campanha ${id}.`);
       } catch (rollbackErr) {
         console.error('[Rollback Critical] Erro catastrófico ao reverter alterações no banco:', rollbackErr);
@@ -490,7 +381,7 @@ export async function PUT(request: Request) {
       .update({
         title,
         description,
-        type,
+        type: effectiveType,
         status,
         media_url,
         media_type,
@@ -538,58 +429,7 @@ export async function PUT(request: Request) {
       }
     }
 
-    // 3. Atualizar Cupom (Operação sequencial 3)
-    if (type === 'COUPON' && coupon_code) {
-      const { data: existingCoupon } = await supabase
-        .from('coupons')
-        .select('id')
-        .eq('campaign_id', id)
-        .maybeSingle();
-
-      if (existingCoupon) {
-        const { error: couponError } = await supabase
-          .from('coupons')
-          .update({
-            code: coupon_code.trim().toUpperCase(),
-            discount_type,
-            discount_value,
-            max_redemptions: max_redemptions ? parseInt(String(max_redemptions), 10) : null,
-            expires_at: expires_at || null,
-          })
-          .eq('campaign_id', id);
-
-        if (couponError) {
-          console.error('Erro ao atualizar cupom:', couponError);
-          await runRollback();
-          return NextResponse.json({ error: 'Erro ao atualizar cupom (código duplicado ou inválido). Alterações revertidas.' }, { status: 500 });
-        }
-      } else {
-        const { error: couponError } = await supabase
-          .from('coupons')
-          .insert({
-            campaign_id: id,
-            code: coupon_code.trim().toUpperCase(),
-            discount_type,
-            discount_value,
-            max_redemptions: max_redemptions ? parseInt(String(max_redemptions), 10) : null,
-            expires_at: expires_at || null,
-          });
-
-        if (couponError) {
-          console.error('Erro ao inserir cupom:', couponError);
-          await runRollback();
-          return NextResponse.json({ error: 'Erro ao criar cupom para a campanha. Alterações revertidas.' }, { status: 500 });
-        }
-      }
-    } else {
-      // Se não for campanha de cupom, remove qualquer cupom associado
-      const { error: deleteCouponError } = await supabase.from('coupons').delete().eq('campaign_id', id);
-      if (deleteCouponError) {
-        console.error('Erro ao deletar cupom associado na mudança de tipo:', deleteCouponError);
-        await runRollback();
-        return NextResponse.json({ error: 'Erro ao remover cupom antigo da campanha. Alterações revertidas.' }, { status: 500 });
-      }
-    }
+    // Cupom NÃO é mais atualizado/criado — tabelas legadas permanecem intactas
 
     return NextResponse.json({ success: true, isDemo: false });
   } catch (err) {

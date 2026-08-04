@@ -145,9 +145,8 @@ describe('CampaignsManager Admin Form & Flow', () => {
     // Tenta submeter com URL de vídeo inválida (sem https://)
     fireEvent.change(videoInput, { target: { value: 'http://youtube.com/myvideo' } });
     
-    // Preenche título obrigatório e código do cupom obrigatório para submissão
+    // Preenche título obrigatório
     fireEvent.change(screen.getByPlaceholderText(/Ex: Ganhe uma sobremesa hoje!/i), { target: { value: 'Vídeo Campanha' } });
-    fireEvent.change(screen.getByPlaceholderText(/Ex: BEMVINDO10/i), { target: { value: 'VIDEO10' } });
 
     fireEvent.click(screen.getByText('Salvar e Publicar'));
 
@@ -265,6 +264,69 @@ describe('CampaignsManager Admin Form & Flow', () => {
     expect(mockFetch).toHaveBeenLastCalledWith('/api/admin/campaigns', expect.objectContaining({
       method: 'PUT',
       body: expect.stringContaining('"media_url":"https://supabase.co/storage/portal-media/campaigns/pizza.png"'),
+    }));
+  });
+
+  it('não deve exibir a opção de criar campanha do tipo COUPON no seletor e nem a seção de cupom', async () => {
+    render(<CampaignsManager />);
+    fireEvent.click(screen.getByText('Criar Campanha'));
+
+    // O select de Tipo de Campanha não deve conter COUPON
+    const selectType = screen.getByLabelText(/Tipo de Campanha \*/i);
+    const options = Array.from(selectType.querySelectorAll('option')).map(o => o.value);
+    expect(options).not.toContain('COUPON');
+
+    // Não deve haver campo de Código de Cupom
+    expect(screen.queryByPlaceholderText(/Ex: BEMVINDO10/i)).not.toBeInTheDocument();
+    expect(screen.queryByText(/Configurações de Cupom de Desconto/i)).not.toBeInTheDocument();
+  });
+
+  it('deve carregar campanha antiga do tipo COUPON como Oferta antiga e convertê-la para PROMO ao editar', async () => {
+    const mockOldCouponCampaign = {
+      id: 'old-coupon-999',
+      title: 'Cupom Antigo Teste',
+      description: 'Cupom de 10% antigo',
+      type: 'COUPON',
+      status: 'ACTIVE',
+      campaign_audiences: [{ target_type: 'ALL', rules: {} }],
+      coupons: [{ id: 'cp-999', code: 'ANTIGO10', discount_value: 10 }]
+    };
+
+    mockFetch.mockImplementationOnce(() => 
+      Promise.resolve({
+        ok: true,
+        json: () => Promise.resolve({ campaigns: [mockOldCouponCampaign] }),
+      })
+    );
+
+    render(<CampaignsManager />);
+
+    // Deve constar "Oferta antiga" na listagem
+    await waitFor(() => {
+      expect(screen.getByText('Oferta antiga')).toBeInTheDocument();
+    });
+
+    // Clica para editar
+    fireEvent.click(screen.getByTitle('Editar campanha'));
+
+    // Deve preencher o formulário, mas o Tipo selecionado deve ser PROMO (convertido)
+    const selectType = screen.getByLabelText(/Tipo de Campanha \*/i) as HTMLSelectElement;
+    expect(selectType.value).toBe('PROMO');
+
+    // Clica para salvar
+    mockFetch.mockImplementationOnce(() => 
+      Promise.resolve({
+        ok: true,
+        json: () => Promise.resolve({ success: true }),
+      })
+    );
+
+    fireEvent.click(screen.getByText('Salvar e Publicar'));
+
+    // O payload enviado à API na edição (PUT) deve conter o tipo PROMO
+    expect(mockFetch).toHaveBeenLastCalledWith('/api/admin/campaigns', expect.objectContaining({
+      method: 'PUT',
+      body: expect.stringContaining('"type":"PROMO"'),
     }));
   });
 });

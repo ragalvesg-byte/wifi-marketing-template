@@ -28,7 +28,7 @@ describe('SuccessOffer Component', () => {
     primary_color: '#ff0000',
     welcome_message: 'Bem-vindo!',
     post_connect_message: 'Internet Liberada!',
-    promo_coupon_code: 'TESTE10',
+    promo_coupon_code: '', // @legacy — campo mantido vazio para compatibilidade
     promo_image_url: 'https://promo.com/image.png',
     relogin_days_interval: 7,
     terms_of_service: 'Termos de uso',
@@ -85,15 +85,10 @@ describe('SuccessOffer Component', () => {
     expect(screen.getByText('Sua internet está ativa.')).toBeInTheDocument();
   });
 
-  it('deve exibir o cupom de desconto quando post_signup_action for COUPON', async () => {
-    const couponSettings = {
-      ...baseSettings,
-      post_signup_action: 'COUPON' as const,
-    };
-
+  it('não deve exibir botão "Copiar Cupom" na tela de sucesso', async () => {
     render(
       <SuccessOffer
-        settings={couponSettings}
+        settings={baseSettings}
         visitorName="João"
         authUrl=""
         openNdsParams={baseOpenNdsParams}
@@ -104,8 +99,34 @@ describe('SuccessOffer Component', () => {
       await Promise.resolve();
     });
 
-    expect(screen.getByText('CUPOM DE DESCONTO')).toBeInTheDocument();
-    expect(screen.getByText('TESTE10')).toBeInTheDocument();
+    expect(screen.queryByText(/Copiar Cupom/i)).not.toBeInTheDocument();
+    expect(screen.queryByText(/CUPOM DE DESCONTO/i)).not.toBeInTheDocument();
+  });
+
+  it('não deve exibir botão "Copiar Cupom" mesmo com promo_coupon_code preenchido (campo legado)', async () => {
+    const legacySettings = {
+      ...baseSettings,
+      promo_coupon_code: 'LEGADO10',
+      post_signup_action: 'COUPON' as const,
+      post_signup_show_coupon: true,
+    };
+
+    render(
+      <SuccessOffer
+        settings={legacySettings}
+        visitorName="João"
+        authUrl=""
+        openNdsParams={baseOpenNdsParams}
+      />
+    );
+
+    await act(async () => {
+      await Promise.resolve();
+    });
+
+    // Cupom legado não deve ser renderizado
+    expect(screen.queryByText('LEGADO10')).not.toBeInTheDocument();
+    expect(screen.queryByText(/Copiar Cupom/i)).not.toBeInTheDocument();
   });
 
   it('deve exibir a imagem promocional quando post_signup_action for PROMO', async () => {
@@ -443,5 +464,66 @@ describe('SuccessOffer Component', () => {
 
     // Deve mostrar "Enviando autorização ao roteador..."
     expect(screen.getByText(/Enviando autorização ao roteador/i)).toBeInTheDocument();
+  });
+
+  it('deve exibir caixa informativa para o atendente quando a oferta não possuir button_url', async () => {
+    const promoSettings = {
+      ...baseSettings,
+      post_signup_action: 'PROMO' as const,
+      post_signup_promo_image_url: 'https://promo.com/image.png',
+      post_signup_promo_title: 'Super Promo Sem Link',
+      post_signup_promo_description: 'Sem URL no botão',
+      post_signup_promo_button_text: 'Oferta Especial',
+      post_signup_promo_button_url: '', // Sem URL
+    };
+
+    render(
+      <SuccessOffer
+        settings={promoSettings}
+        visitorName="João"
+        authUrl=""
+        openNdsParams={baseOpenNdsParams}
+      />
+    );
+
+    await act(async () => {
+      await Promise.resolve();
+    });
+
+    // Se o portal carregar campanhas dinâmicas, precisamos mockar a resposta de /api/portal/campaigns
+    // Neste teste ele usará o mock do activePromoCampaign ou fallback de settings se activePromoCampaign for null.
+    // Como activePromoCampaign é carregado via fetch, vamos Mockar o fetch de campanhas vazias.
+    expect(screen.getByText(/Apresente esta tela ao atendente/i)).toBeInTheDocument();
+    // Não deve exibir botão clicável da promoção
+    expect(screen.queryByRole('button', { name: 'Oferta Especial' })).not.toBeInTheDocument();
+  });
+
+  it('deve exibir o botão configurado quando a oferta possuir button_url', async () => {
+    const promoSettings = {
+      ...baseSettings,
+      post_signup_action: 'PROMO' as const,
+      post_signup_promo_image_url: 'https://promo.com/image.png',
+      post_signup_promo_title: 'Super Promo Com Link',
+      post_signup_promo_description: 'Com URL no botão',
+      post_signup_promo_button_text: 'Oferta Especial Com Link',
+      post_signup_promo_button_url: 'https://bistro.com/promo',
+    };
+
+    render(
+      <SuccessOffer
+        settings={promoSettings}
+        visitorName="João"
+        authUrl=""
+        openNdsParams={baseOpenNdsParams}
+      />
+    );
+
+    await act(async () => {
+      await Promise.resolve();
+    });
+
+    // Como tem button_url, deve exibir o botão
+    expect(screen.getByRole('button', { name: 'Oferta Especial Com Link' })).toBeInTheDocument();
+    expect(screen.queryByText(/Apresente esta tela ao atendente/i)).not.toBeInTheDocument();
   });
 });

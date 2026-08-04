@@ -146,39 +146,28 @@ describe('Wi-Fi Marketing Stabilization Tests', () => {
           maybeSingle: () => Promise.resolve({ data: { id: 'audience-1', target_type: 'ALL' } }),
         })),
       }));
-      // 3. SELECT coupons
-      mockSelect.mockImplementationOnce(() => ({
-        eq: vi.fn().mockImplementationOnce(() => ({
-          maybeSingle: () => Promise.resolve({ data: null }),
-        })),
-      }));
 
       // Mocks das operações de alteração:
-      // 4. UPDATE campaigns
+      // 3. UPDATE campaigns
       mockUpdate.mockImplementationOnce(() => ({
         eq: () => Promise.resolve({ error: null }),
       }));
 
-      // 5. SELECT existing audience para decidir update ou insert
+      // 4. SELECT existing audience para decidir update ou insert
       mockSelect.mockImplementationOnce(() => ({
         eq: vi.fn().mockImplementationOnce(() => ({
           maybeSingle: () => Promise.resolve({ data: { id: 'audience-1' } }),
         })),
       }));
 
-      // 6. UPDATE campaign_audiences
+      // 5. UPDATE campaign_audiences
       mockUpdate.mockImplementationOnce(() => ({
-        eq: () => Promise.resolve({ error: null }),
-      }));
-
-      // 7. DELETE coupons (como type não é COUPON)
-      mockDelete.mockImplementationOnce(() => ({
         eq: () => Promise.resolve({ error: null }),
       }));
 
       const payload = {
         id: 'camp-id-to-edit',
-        title: 'Campanha Editada',
+        title: 'Campanha Editada Sucesso',
         type: 'PROMO',
         status: 'ACTIVE',
         target_type: 'ALL',
@@ -193,10 +182,12 @@ describe('Wi-Fi Marketing Stabilization Tests', () => {
       expect(res.status).toBe(200);
       const data = await res.json();
       expect(data.success).toBe(true);
-      expect(mockUpdate).toHaveBeenCalledTimes(2); // um para campanha, outro para publico
+
+      // Duas atualizações: campanha e regras de público
+      expect(mockUpdate).toHaveBeenCalledTimes(2);
     });
 
-    it('deve executar rollback completo se a atualização de público falhar no PUT', async () => {
+    it('deve executar rollback se a atualizacao das regras de publico-alvo falhar no PUT', async () => {
       // Mocks para leituras iniciais (estado anterior):
       // 1. SELECT campaigns
       mockSelect.mockImplementationOnce(() => ({
@@ -210,41 +201,31 @@ describe('Wi-Fi Marketing Stabilization Tests', () => {
           maybeSingle: () => Promise.resolve({ data: { id: 'audience-1', target_type: 'ALL', rules: {} } }),
         })),
       }));
-      // 3. SELECT coupons
-      mockSelect.mockImplementationOnce(() => ({
-        eq: vi.fn().mockImplementationOnce(() => ({
-          maybeSingle: () => Promise.resolve({ data: null }),
-        })),
-      }));
 
-      // 4. UPDATE campaigns (sucesso)
+      // 3. UPDATE campaigns (sucesso)
       mockUpdate.mockImplementationOnce(() => ({
         eq: () => Promise.resolve({ error: null }),
       }));
 
-      // 5. SELECT existing audience para decidir update ou insert
+      // 4. SELECT existing audience para decidir update ou insert
       mockSelect.mockImplementationOnce(() => ({
         eq: vi.fn().mockImplementationOnce(() => ({
           maybeSingle: () => Promise.resolve({ data: { id: 'audience-1' } }),
         })),
       }));
 
-      // 6. UPDATE campaign_audiences (FALHA)
+      // 5. UPDATE campaign_audiences (FALHA)
       mockUpdate.mockImplementationOnce(() => ({
         eq: () => Promise.resolve({ error: new Error('Banco fora do ar ao salvar público') }),
       }));
 
       // --- MOCKS DO ROLLBACK (executados após falha) ---
-      // 7. Reverter UPDATE campaigns
+      // 6. Reverter UPDATE campaigns
       mockUpdate.mockImplementationOnce(() => ({
         eq: () => Promise.resolve({ error: null }),
       }));
-      // 8. Reverter UPDATE campaign_audiences
+      // 7. Reverter UPDATE campaign_audiences
       mockUpdate.mockImplementationOnce(() => ({
-        eq: () => Promise.resolve({ error: null }),
-      }));
-      // 9. Reverter DELETE coupons (como prevCoupon era null, chama delete para garantir)
-      mockDelete.mockImplementationOnce(() => ({
         eq: () => Promise.resolve({ error: null }),
       }));
 
@@ -268,99 +249,6 @@ describe('Wi-Fi Marketing Stabilization Tests', () => {
 
       // Verifica se as funções de rollback foram acionadas
       expect(mockUpdate).toHaveBeenCalledTimes(4); 
-      expect(mockDelete).toHaveBeenCalledTimes(1);
-    });
-
-    it('deve executar rollback completo se a atualização de cupom falhar no PUT', async () => {
-      // Mocks para leituras iniciais (estado anterior):
-      // 1. SELECT campaigns
-      mockSelect.mockImplementationOnce(() => ({
-        eq: vi.fn().mockImplementationOnce(() => ({
-          maybeSingle: () => Promise.resolve({ data: { id: 'camp-id-to-edit', title: 'Antiga', type: 'COUPON' } }),
-        })),
-      }));
-      // 2. SELECT campaign_audiences
-      mockSelect.mockImplementationOnce(() => ({
-        eq: vi.fn().mockImplementationOnce(() => ({
-          maybeSingle: () => Promise.resolve({ data: { id: 'audience-1', target_type: 'ALL', rules: {} } }),
-        })),
-      }));
-      // 3. SELECT coupons
-      mockSelect.mockImplementationOnce(() => ({
-        eq: vi.fn().mockImplementationOnce(() => ({
-          maybeSingle: () => Promise.resolve({ data: { id: 'coupon-1', code: 'CUPOM_OLD' } }),
-        })),
-      }));
-
-      // 4. UPDATE campaigns (sucesso)
-      mockUpdate.mockImplementationOnce(() => ({
-        eq: () => Promise.resolve({ error: null }),
-      }));
-
-      // 5. SELECT existing audience para decidir update ou insert
-      mockSelect.mockImplementationOnce(() => ({
-        eq: vi.fn().mockImplementationOnce(() => ({
-          maybeSingle: () => Promise.resolve({ data: { id: 'audience-1' } }),
-        })),
-      }));
-
-      // 6. UPDATE campaign_audiences (sucesso)
-      mockUpdate.mockImplementationOnce(() => ({
-        eq: () => Promise.resolve({ error: null }),
-      }));
-
-      // 7. SELECT existing coupon para decidir update ou insert
-      mockSelect.mockImplementationOnce(() => ({
-        eq: vi.fn().mockImplementationOnce(() => ({
-          maybeSingle: () => Promise.resolve({ data: { id: 'coupon-1' } }),
-        })),
-      }));
-
-      // 8. UPDATE coupons (FALHA)
-      mockUpdate.mockImplementationOnce(() => ({
-        eq: () => Promise.resolve({ error: new Error('Código duplicado ou erro no banco') }),
-      }));
-
-      // --- MOCKS DO ROLLBACK (executados após falha) ---
-      // 9. Reverter UPDATE campaigns
-      mockUpdate.mockImplementationOnce(() => ({
-        eq: () => Promise.resolve({ error: null }),
-      }));
-      // 10. Reverter UPDATE campaign_audiences
-      mockUpdate.mockImplementationOnce(() => ({
-        eq: () => Promise.resolve({ error: null }),
-      }));
-      // 11. Reverter UPDATE coupons (busca cupom atual no rollback primeiro)
-      mockSelect.mockImplementationOnce(() => ({
-        eq: vi.fn().mockImplementationOnce(() => ({
-          maybeSingle: () => Promise.resolve({ data: { id: 'coupon-1' } }),
-        })),
-      }));
-      mockUpdate.mockImplementationOnce(() => ({
-        eq: () => Promise.resolve({ error: null }),
-      }));
-
-      const payload = {
-        id: 'camp-id-to-edit',
-        title: 'Campanha Editada Falha Cupom',
-        type: 'COUPON',
-        status: 'ACTIVE',
-        target_type: 'ALL',
-        coupon_code: 'CUPOM_NEW',
-      };
-
-      const req = new Request('http://localhost/api/admin/campaigns', {
-        method: 'PUT',
-        body: JSON.stringify(payload),
-      });
-
-      const res = await putAdminCampaigns(req);
-      expect(res.status).toBe(500);
-      const data = await res.json();
-      expect(data.error).toContain('Alterações revertidas');
-
-      // Verifica se as atualizações/reversões ocorreram (3 updates do PUT + 3 updates do rollback)
-      expect(mockUpdate).toHaveBeenCalledTimes(6); 
     });
   });
 });

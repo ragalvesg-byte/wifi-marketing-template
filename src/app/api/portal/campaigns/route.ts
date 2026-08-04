@@ -18,29 +18,20 @@ export async function GET(request: Request) {
 
     const isDemoModeVar = process.env.DEMO_MODE === 'true';
 
-    // 2. Mock data para modo demonstração
+    // 2. Mock data para modo demonstração (sem cupons)
     if (isDemoModeVar && (isDemo || !supabase)) {
       const mockActiveCampaigns = [
         {
           id: 'campaign-1',
-          title: 'Ganhe 15% na sua próxima Pizza!',
-          description: 'Promoção exclusiva de boas-vindas para novos clientes.',
-          type: 'COUPON',
+          title: 'Ganhe uma sobremesa de boas-vindas!',
+          description: 'Promoção exclusiva de boas-vindas para novos clientes. Apresente esta tela ao atendente.',
+          type: 'PROMO',
           status: 'ACTIVE',
           media_url: 'https://images.unsplash.com/photo-1513104890138-7c749659a591',
           media_type: 'IMAGE',
           aspect_ratio: '4:5',
-          button_text: 'Copiar Cupom de 15%',
+          button_text: null,
           button_url: null,
-          coupons: [
-            {
-              id: 'coupon-1',
-              campaign_id: 'campaign-1',
-              code: 'PIZZA15',
-              discount_type: 'PERCENTAGE',
-              discount_value: 15.00,
-            }
-          ]
         },
         {
           id: 'campaign-2',
@@ -59,7 +50,7 @@ export async function GET(request: Request) {
       // Filtro básico na demonstração
       let matched = [...mockActiveCampaigns];
       if (visitorId === 'visitor-new') {
-        matched = [mockActiveCampaigns[0]]; // apenas a de pizza
+        matched = [mockActiveCampaigns[0]]; // apenas a de boas-vindas
       } else if (visitorId === 'visitor-bday') {
         matched = [mockActiveCampaigns[1]]; // apenas a de aniversário
       }
@@ -85,13 +76,12 @@ export async function GET(request: Request) {
       }
     }
 
-    // 4. Buscar todas as campanhas ativas com regras e cupons
+    // 4. Buscar todas as campanhas ativas com regras (coupons mantidos no select para compatibilidade)
     const { data: activeCampaigns, error: campaignsError } = await supabase
       .from('campaigns')
       .select(`
         *,
-        campaign_audiences (*),
-        coupons (*)
+        campaign_audiences (*)
       `)
       .eq('status', 'ACTIVE');
 
@@ -100,22 +90,9 @@ export async function GET(request: Request) {
       return NextResponse.json({ campaigns: [] });
     }
 
-    // 5. Se houver cupons resgatados por este visitante, buscar para filtrar
-    const redeemedCouponIds = new Set<string>();
-    if (visitor) {
-      const { data: redemptions } = await supabase
-        .from('coupon_redemptions')
-        .select('coupon_id')
-        .eq('visitor_id', visitor.id);
-
-      if (redemptions) {
-        redemptions.forEach((r: any) => redeemedCouponIds.add(r.coupon_id));
-      }
-    }
-
     const currentMonth = new Date().getMonth() + 1; // 1-12
 
-    // 6. Aplicar regras de segmentação (matching logic)
+    // 5. Aplicar regras de segmentação (matching logic) — sem filtro de cupons resgatados
     const matchedCampaigns = activeCampaigns.filter((campaign: any) => {
       // Validação do período de início e término da campanha
       const now = new Date();
@@ -124,12 +101,6 @@ export async function GET(request: Request) {
       }
       if (campaign.end_date && new Date(campaign.end_date) < now) {
         return false;
-      }
-
-      // Se a campanha for do tipo COUPON e todos os seus cupons já foram resgatados por este visitante
-      if (campaign.type === 'COUPON' && campaign.coupons) {
-        const hasUnredeemed = campaign.coupons.some((c: any) => !redeemedCouponIds.has(c.id));
-        if (!hasUnredeemed) return false;
       }
 
       const audience = campaign.campaign_audiences?.[0];
@@ -183,85 +154,10 @@ export async function GET(request: Request) {
   }
 }
 
-// Endpoint POST para registrar resgate de cupom de forma segura pelo servidor
-export async function POST(request: Request) {
-  try {
-    const body = await request.json();
-    const { coupon_id, visitor_id } = body;
-
-    if (!coupon_id || !visitor_id) {
-      return NextResponse.json({ error: 'Dados insuficientes.' }, { status: 400 });
-    }
-
-    let supabase;
-    try {
-      supabase = createAdminClient();
-    } catch (e) {
-      console.warn('Supabase Admin não disponível na gravação de resgate (modo demo):', e);
-    }
-
-    if (!supabase) {
-      return NextResponse.json({ success: true, isDemo: true });
-    }
-
-    // 1. Verificar se o cupom existe, não expirou e tem cota restante
-    const { data: coupon, error: couponErr } = await supabase
-      .from('coupons')
-      .select('*')
-      .eq('id', coupon_id)
-      .single();
-
-    if (couponErr || !coupon) {
-      return NextResponse.json({ error: 'Cupom não encontrado.' }, { status: 404 });
-    }
-
-    if (coupon.expires_at && new Date(coupon.expires_at) < new Date()) {
-      return NextResponse.json({ error: 'Este cupom já expirou.' }, { status: 400 });
-    }
-
-    if (coupon.max_redemptions !== null && coupon.current_redemptions >= coupon.max_redemptions) {
-      return NextResponse.json({ error: 'Limite de resgates esgotado.' }, { status: 400 });
-    }
-
-    // 2. Registrar o resgate na tabela (com UNIQUE constraint para evitar múltiplos)
-    const { error: redemptionErr } = await supabase
-      .from('coupon_redemptions')
-      .insert({
-        coupon_id,
-        visitor_id,
-      });
-
-    if (redemptionErr) {
-      if (redemptionErr.code === '23505') { // Código de erro postgres para unique constraint violation
-        return NextResponse.json({ error: 'Você já resgatou este cupom.' }, { status: 400 });
-      }
-      console.error('Erro ao salvar resgate no banco:', redemptionErr);
-      return NextResponse.json({ error: 'Erro ao registrar resgate.' }, { status: 500 });
-    }
-
-    // 3. Incrementar o contador de resgates no cupom
-    await supabase
-      .from('coupons')
-      .update({ current_redemptions: coupon.current_redemptions + 1 })
-      .eq('id', coupon.id);
-
-    // 4. Gravar evento de resgate no visitor_events
-    await supabase
-      .from('visitor_events')
-      .insert({
-        event_type: 'COUPON_REDEEMED',
-        visitor_id,
-        campaign_id: coupon.campaign_id || null,
-        metadata: {
-          coupon_code: coupon.code,
-          discount_type: coupon.discount_type,
-          discount_value: coupon.discount_value
-        }
-      });
-
-    return NextResponse.json({ success: true });
-  } catch (err) {
-    console.error('Erro ao processar resgate de cupom:', err);
-    return NextResponse.json({ error: 'Erro interno no servidor.' }, { status: 500 });
-  }
+// Endpoint POST de resgate de cupom desativado — HTTP 410 Gone
+export async function POST() {
+  return NextResponse.json(
+    { error: 'O sistema de resgate de cupons foi desativado.' },
+    { status: 410 }
+  );
 }

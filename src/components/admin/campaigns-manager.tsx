@@ -2,8 +2,8 @@
 
 import React, { useState, useEffect } from 'react';
 import { 
-  Megaphone, Tag, Users, Trash2, Plus, 
-  Loader2, AlertCircle, CheckCircle, Percent, 
+  Megaphone, Users, Trash2, Plus, 
+  Loader2, AlertCircle, CheckCircle, 
   Image, Calendar, Eye, ExternalLink, RefreshCw,
   Play, Pause, Copy, Pencil
 } from 'lucide-react';
@@ -22,7 +22,7 @@ export function CampaignsManager() {
   // Form State
   const [title, setTitle] = useState('');
   const [description, setDescription] = useState('');
-  const [type, setType] = useState<'PROMO' | 'COUPON' | 'BANNER' | 'SURVEY'>('COUPON');
+  const [type, setType] = useState<'PROMO' | 'BANNER' | 'SURVEY' | 'EVENT'>('PROMO');
   const [status, setStatus] = useState<'DRAFT' | 'ACTIVE' | 'PAUSED'>('ACTIVE');
   const [mediaUrl, setMediaUrl] = useState('');
   const [mediaType, setMediaType] = useState<'IMAGE' | 'VIDEO'>('IMAGE');
@@ -36,18 +36,15 @@ export function CampaignsManager() {
   const [targetType, setTargetType] = useState<'ALL' | 'NEW_VISITORS' | 'RETURNING_VISITORS' | 'GENDER' | 'BIRTHDAY_MONTH'>('ALL');
   const [birthdayMonthRule, setBirthdayMonthRule] = useState('8');
 
-  // Coupon State
-  const [couponCode, setCouponCode] = useState('');
-  const [discountType, setDiscountType] = useState<'PERCENTAGE' | 'FIXED'>('PERCENTAGE');
-  const [discountValue, setDiscountValue] = useState(10);
-  const [maxRedemptions, setMaxRedemptions] = useState('');
-  const [couponExpiresAt, setCouponExpiresAt] = useState('');
+  // Coupon State removido — cupom desativado, sistema de oferta simples
 
   const handleEditClick = (campaign: any) => {
     setEditingCampaignId(campaign.id);
     setTitle(campaign.title || '');
     setDescription(campaign.description || '');
-    setType(campaign.type || 'COUPON');
+    // Campanhas legadas COUPON são convertidas para PROMO ao editar
+    const campaignType = campaign.type === 'COUPON' ? 'PROMO' : campaign.type;
+    setType(campaignType || 'PROMO');
     setStatus(campaign.status || 'ACTIVE');
     setMediaUrl(campaign.media_url || '');
     setMediaType(campaign.media_type || 'IMAGE');
@@ -72,21 +69,6 @@ export function CampaignsManager() {
       setTargetType('ALL');
     }
 
-    const coupon = campaign.coupons?.[0];
-    if (coupon) {
-      setCouponCode(coupon.code || '');
-      setDiscountType(coupon.discount_type || 'PERCENTAGE');
-      setDiscountValue(coupon.discount_value || 0);
-      setMaxRedemptions(coupon.max_redemptions ? String(coupon.max_redemptions) : '');
-      setCouponExpiresAt(coupon.expires_at ? coupon.expires_at.substring(0, 10) : '');
-    } else {
-      setCouponCode('');
-      setDiscountType('PERCENTAGE');
-      setDiscountValue(10);
-      setMaxRedemptions('');
-      setCouponExpiresAt('');
-    }
-
     setActiveTab('CREATE');
   };
 
@@ -94,14 +76,13 @@ export function CampaignsManager() {
     const newStatus = campaign.status === 'ACTIVE' ? 'PAUSED' : 'ACTIVE';
     try {
       const audience = campaign.campaign_audiences?.[0];
-      const coupon = campaign.coupons?.[0];
       const rules = audience?.rules || {};
       
       const payload = {
         id: campaign.id,
         title: campaign.title,
         description: campaign.description,
-        type: campaign.type,
+        type: campaign.type === 'COUPON' ? 'PROMO' : campaign.type,
         status: newStatus,
         media_url: campaign.media_url,
         media_type: campaign.media_type,
@@ -112,11 +93,6 @@ export function CampaignsManager() {
         end_date: campaign.end_date,
         target_type: audience?.target_type || 'ALL',
         rules,
-        coupon_code: coupon?.code || null,
-        discount_type: coupon?.discount_type || 'PERCENTAGE',
-        discount_value: coupon?.discount_value || 0,
-        max_redemptions: coupon?.max_redemptions || null,
-        expires_at: coupon?.expires_at || null,
       };
       
       const res = await fetch('/api/admin/campaigns', {
@@ -141,15 +117,12 @@ export function CampaignsManager() {
   const handleDuplicate = async (campaign: any) => {
     try {
       const audience = campaign.campaign_audiences?.[0];
-      const coupon = campaign.coupons?.[0];
       const rules = audience?.rules || {};
-      
-      const duplicateCouponCode = coupon?.code ? `${coupon.code.substring(0, 10)}_DP${Math.random().toString(36).substring(2, 5).toUpperCase()}` : null;
 
       const payload = {
         title: `Cópia de ${campaign.title}`,
         description: campaign.description,
-        type: campaign.type,
+        type: campaign.type === 'COUPON' ? 'PROMO' : campaign.type,
         status: 'DRAFT',
         media_url: campaign.media_url,
         media_type: campaign.media_type,
@@ -160,11 +133,6 @@ export function CampaignsManager() {
         end_date: campaign.end_date,
         target_type: audience?.target_type || 'ALL',
         rules,
-        coupon_code: duplicateCouponCode,
-        discount_type: coupon?.discount_type || 'PERCENTAGE',
-        discount_value: coupon?.discount_value || 0,
-        max_redemptions: coupon?.max_redemptions || null,
-        expires_at: coupon?.expires_at || null,
       };
       
       const res = await fetch('/api/admin/campaigns', {
@@ -234,7 +202,7 @@ export function CampaignsManager() {
     setEditingCampaignId(null);
     setTitle('');
     setDescription('');
-    setType('COUPON');
+    setType('PROMO');
     setStatus('ACTIVE');
     setMediaUrl('');
     setMediaType('IMAGE');
@@ -245,11 +213,6 @@ export function CampaignsManager() {
     setEndDate('');
     setTargetType('ALL');
     setBirthdayMonthRule('8');
-    setCouponCode('');
-    setDiscountType('PERCENTAGE');
-    setDiscountValue(10);
-    setMaxRedemptions('');
-    setCouponExpiresAt('');
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -296,11 +259,6 @@ export function CampaignsManager() {
       end_date: endDate || null,
       target_type: targetType,
       rules,
-      coupon_code: type === 'COUPON' ? couponCode : null,
-      discount_type: discountType,
-      discount_value: discountValue,
-      max_redemptions: maxRedemptions ? parseInt(maxRedemptions, 10) : null,
-      expires_at: couponExpiresAt || null,
     };
 
     try {
@@ -333,10 +291,10 @@ export function CampaignsManager() {
         <div>
           <h1 className="text-2xl font-extrabold text-slate-900 tracking-tight flex items-center gap-2">
             <Megaphone className="w-6 h-6 text-blue-600 animate-pulse" />
-            Campanhas & Cupons de Desconto
+            Campanhas & Ofertas
           </h1>
           <p className="text-sm text-slate-500 mt-1">
-            Crie anúncios direcionados, pesquisas ou cupons dinâmicos exibidos na tela de sucesso do visitante.
+            Crie ofertas, banners e pesquisas exibidas na tela de sucesso do visitante.
           </p>
         </div>
 
@@ -411,7 +369,6 @@ export function CampaignsManager() {
                 <tbody className="divide-y divide-slate-100 text-sm">
                   {campaigns.map((campaign: any) => {
                     const audience = campaign.campaign_audiences?.[0];
-                    const coupon = campaign.coupons?.[0];
                     return (
                       <tr key={campaign.id} className="hover:bg-slate-50/50 transition-colors">
                         <td className="px-6 py-4">
@@ -432,11 +389,11 @@ export function CampaignsManager() {
                         <td className="px-6 py-4">
                           <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-semibold ${
                             campaign.type === 'COUPON' 
-                              ? 'bg-emerald-50 text-emerald-700 border border-emerald-100'
+                              ? 'bg-amber-50 text-amber-700 border border-amber-100'
                               : 'bg-blue-50 text-blue-700 border border-blue-100'
                           }`}>
-                            {campaign.type === 'COUPON' ? <Tag className="w-3.5 h-3.5" /> : <Megaphone className="w-3.5 h-3.5" />}
-                            {campaign.type === 'COUPON' ? 'Cupom' : campaign.type === 'PROMO' ? 'Banner Promo' : campaign.type}
+                            <Megaphone className="w-3.5 h-3.5" />
+                            {campaign.type === 'COUPON' ? 'Oferta antiga' : campaign.type === 'PROMO' ? 'Banner Promo' : campaign.type === 'BANNER' ? 'Banner' : campaign.type === 'SURVEY' ? 'Pesquisa' : campaign.type === 'EVENT' ? 'Evento' : campaign.type}
                           </span>
                         </td>
                         <td className="px-6 py-4">
@@ -463,16 +420,6 @@ export function CampaignsManager() {
                           </span>
                         </td>
                         <td className="px-6 py-4 text-xs space-y-1">
-                          {coupon && (
-                            <p className="font-semibold text-slate-900">
-                              Cupom: <span className="font-mono bg-slate-100 px-1 py-0.5 rounded border border-slate-200">{coupon.code}</span>
-                            </p>
-                          )}
-                          {coupon && (
-                            <p className="text-slate-500">
-                              Desconto: {coupon.discount_value}% | Resgates: {coupon.current_redemptions || 0}
-                            </p>
-                          )}
                           {campaign.button_url && (
                             <a
                               href={campaign.button_url}
@@ -482,6 +429,9 @@ export function CampaignsManager() {
                             >
                               Link do botão <ExternalLink className="w-3 h-3" />
                             </a>
+                          )}
+                          {!campaign.button_url && (
+                            <span className="text-slate-400 italic">Sem link configurado</span>
                           )}
                         </td>
                         <td className="px-6 py-4 text-right">
@@ -555,8 +505,10 @@ export function CampaignsManager() {
                 onChange={(e) => setType(e.target.value as any)}
                 className="w-full px-4 py-2.5 rounded-xl border border-slate-200 focus:ring-2 focus:ring-blue-500/30 focus:outline-none text-slate-900 bg-slate-50/50 text-sm font-medium"
               >
-                <option value="COUPON">Cupom de Desconto</option>
                 <option value="PROMO">Banner Promocional</option>
+                <option value="BANNER">Banner Informativo</option>
+                <option value="SURVEY">Pesquisa</option>
+                <option value="EVENT">Evento</option>
               </select>
             </div>
 
@@ -712,77 +664,10 @@ export function CampaignsManager() {
             )}
           </div>
 
-          {type === 'COUPON' && (
-            <>
-              <div className="border-b border-slate-100 pb-4 pt-2">
-                <h2 className="text-lg font-bold text-slate-900">4. Configurações de Cupom de Desconto</h2>
-                <p className="text-xs text-slate-500">Defina os parâmetros de resgate e valores do código de cupom.</p>
-              </div>
-
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                <div className="space-y-2">
-                  <label className="block text-sm font-semibold text-slate-700">Código do Cupom *</label>
-                  <input
-                    type="text"
-                    required={type === 'COUPON'}
-                    placeholder="Ex: BEMVINDO10"
-                    value={couponCode}
-                    onChange={(e) => setCouponCode(e.target.value)}
-                    className="w-full px-4 py-2.5 rounded-xl border border-slate-200 focus:ring-2 focus:ring-blue-500/30 focus:outline-none text-slate-900 bg-slate-50/50 text-sm font-mono tracking-wider"
-                  />
-                </div>
-
-                <div className="space-y-2">
-                  <label className="block text-sm font-semibold text-slate-700">Tipo de Desconto</label>
-                  <select
-                    value={discountType}
-                    onChange={(e) => setDiscountType(e.target.value as any)}
-                    className="w-full px-4 py-2.5 rounded-xl border border-slate-200 focus:ring-2 focus:ring-blue-500/30 focus:outline-none text-slate-900 bg-slate-50/50 text-sm font-medium"
-                  >
-                    <option value="PERCENTAGE">Porcentagem (%)</option>
-                    <option value="FIXED">Valor Fixo (R$)</option>
-                  </select>
-                </div>
-
-                <div className="space-y-2">
-                  <label className="block text-sm font-semibold text-slate-700">Valor do Desconto *</label>
-                  <input
-                    type="number"
-                    min="1"
-                    step="0.01"
-                    required={type === 'COUPON'}
-                    value={discountValue}
-                    onChange={(e) => setDiscountValue(parseFloat(e.target.value) || 0)}
-                    className="w-full px-4 py-2.5 rounded-xl border border-slate-200 focus:ring-2 focus:ring-blue-500/30 focus:outline-none text-slate-900 bg-slate-50/50 text-sm"
-                  />
-                </div>
-
-                <div className="space-y-2">
-                  <label className="block text-sm font-semibold text-slate-700">Máximo de Resgates (Opcional)</label>
-                  <input
-                    type="number"
-                    placeholder="Sem limites"
-                    value={maxRedemptions}
-                    onChange={(e) => setMaxRedemptions(e.target.value)}
-                    className="w-full px-4 py-2.5 rounded-xl border border-slate-200 focus:ring-2 focus:ring-blue-500/30 focus:outline-none text-slate-900 bg-slate-50/50 text-sm"
-                  />
-                </div>
-
-                <div className="space-y-2">
-                  <label className="block text-sm font-semibold text-slate-700">Validade do Cupom (Opcional)</label>
-                  <input
-                    type="date"
-                    value={couponExpiresAt}
-                    onChange={(e) => setCouponExpiresAt(e.target.value)}
-                    className="w-full px-4 py-2.5 rounded-xl border border-slate-200 focus:ring-2 focus:ring-blue-500/30 focus:outline-none text-slate-900 bg-slate-50/50 text-sm"
-                  />
-                </div>
-              </div>
-            </>
-          )}
+          {/* Seção de cupom removida — sistema de oferta simples */}
 
           <div className="border-b border-slate-100 pb-4 pt-2">
-            <h2 className="text-lg font-bold text-slate-900">5. Agendamento e Publicação</h2>
+            <h2 className="text-lg font-bold text-slate-900">4. Agendamento e Publicação</h2>
             <p className="text-xs text-slate-500">Defina o período de atividade e o status inicial da campanha.</p>
           </div>
 

@@ -53,7 +53,7 @@ describe('Portal Campaigns Matching Engine', () => {
       const mockCampaigns = [
         {
           id: 'c1',
-          type: 'COUPON',
+          type: 'PROMO',
           status: 'ACTIVE',
           campaign_audiences: [{ target_type: 'NEW_VISITORS', rules: {} }],
         },
@@ -67,11 +67,6 @@ describe('Portal Campaigns Matching Engine', () => {
 
       mockSelect.mockImplementationOnce(() => ({
         eq: () => Promise.resolve({ data: mockCampaigns }),
-      }));
-
-      // Mock do redemptions (nenhuma)
-      mockSelect.mockImplementationOnce(() => ({
-        eq: () => Promise.resolve({ data: [] }),
       }));
 
       const req = new Request('http://localhost/api/portal/campaigns?visitorId=v1');
@@ -110,103 +105,12 @@ describe('Portal Campaigns Matching Engine', () => {
         eq: () => Promise.resolve({ data: mockCampaigns }),
       }));
 
-      // Mock redemptions (nenhuma)
-      mockSelect.mockImplementationOnce(() => ({
-        eq: () => Promise.resolve({ data: [] }),
-      }));
-
       const req = new Request('http://localhost/api/portal/campaigns?visitorId=v2');
       const res = await GET(req);
       const data = await res.json();
 
       expect(data.campaigns.length).toBe(1);
       expect(data.campaigns[0].id).toBe('c-fem');
-    });
-
-    it('deve filtrar campanhas por mês de aniversário', async () => {
-      const currentMonth = new Date().getMonth() + 1;
-
-      // Mock do visitante nascido neste mês
-      mockSelect.mockImplementationOnce(() => ({
-        eq: vi.fn().mockImplementationOnce(() => ({
-          single: () => Promise.resolve({ data: { id: 'v3', total_visits: 3, date_of_birth: `1990-0${currentMonth}-15` } }),
-        })),
-      }));
-
-      // Mock campanhas (uma aniversário mês atual, uma outro mês)
-      const mockCampaigns = [
-        {
-          id: 'c-bday',
-          type: 'PROMO',
-          status: 'ACTIVE',
-          campaign_audiences: [{ target_type: 'BIRTHDAY_MONTH', rules: { birthday_month: currentMonth } }],
-        },
-        {
-          id: 'c-other-bday',
-          type: 'PROMO',
-          status: 'ACTIVE',
-          campaign_audiences: [{ target_type: 'BIRTHDAY_MONTH', rules: { birthday_month: currentMonth === 12 ? 1 : currentMonth + 1 } }],
-        },
-      ];
-
-      mockSelect.mockImplementationOnce(() => ({
-        eq: () => Promise.resolve({ data: mockCampaigns }),
-      }));
-
-      // Mock redemptions (nenhuma)
-      mockSelect.mockImplementationOnce(() => ({
-        eq: () => Promise.resolve({ data: [] }),
-      }));
-
-      const req = new Request('http://localhost/api/portal/campaigns?visitorId=v3');
-      const res = await GET(req);
-      const data = await res.json();
-
-      expect(data.campaigns.length).toBe(1);
-      expect(data.campaigns[0].id).toBe('c-bday');
-    });
-
-    it('deve ocultar cupons que o visitante já resgatou', async () => {
-      // Mock do visitante
-      mockSelect.mockImplementationOnce(() => ({
-        eq: vi.fn().mockImplementationOnce(() => ({
-          single: () => Promise.resolve({ data: { id: 'v4', total_visits: 3 } }),
-        })),
-      }));
-
-      // Mock campanhas com cupons
-      const mockCampaigns = [
-        {
-          id: 'c-coupon-1',
-          type: 'COUPON',
-          status: 'ACTIVE',
-          campaign_audiences: [{ target_type: 'ALL', rules: {} }],
-          coupons: [{ id: 'coupon-redeemed', code: 'PROMO10' }],
-        },
-        {
-          id: 'c-coupon-2',
-          type: 'COUPON',
-          status: 'ACTIVE',
-          campaign_audiences: [{ target_type: 'ALL', rules: {} }],
-          coupons: [{ id: 'coupon-active', code: 'PROMO20' }],
-        },
-      ];
-
-      mockSelect.mockImplementationOnce(() => ({
-        eq: () => Promise.resolve({ data: mockCampaigns }),
-      }));
-
-      // Mock de resgates (visitante resgatou o coupon-redeemed)
-      mockSelect.mockImplementationOnce(() => ({
-        eq: () => Promise.resolve({ data: [{ coupon_id: 'coupon-redeemed' }] }),
-      }));
-
-      const req = new Request('http://localhost/api/portal/campaigns?visitorId=v4');
-      const res = await GET(req);
-      const data = await res.json();
-
-      expect(data.campaigns.length).toBe(1);
-      expect(data.campaigns[0].id).toBe('c-coupon-2'); // Apenas o cupom não resgatado
     });
 
     it('deve ocultar campanhas fora do periodo de vigencia', async () => {
@@ -248,11 +152,6 @@ describe('Portal Campaigns Matching Engine', () => {
         eq: () => Promise.resolve({ data: mockCampaigns }),
       }));
 
-      // Mock redemptions (nenhuma)
-      mockSelect.mockImplementationOnce(() => ({
-        eq: () => Promise.resolve({ data: [] }),
-      }));
-
       const req = new Request('http://localhost/api/portal/campaigns?visitorId=v5');
       const res = await GET(req);
       const data = await res.json();
@@ -262,62 +161,17 @@ describe('Portal Campaigns Matching Engine', () => {
     });
   });
 
-  describe('POST coupon redemption', () => {
-    it('deve registrar resgates de cupom com sucesso e atualizar contador', async () => {
-      // 1. Mock do cupom ativo
-      mockSelect.mockImplementationOnce(() => ({
-        select: vi.fn(),
-        eq: vi.fn().mockImplementationOnce(() => ({
-          single: () => Promise.resolve({
-            data: { id: 'coupon-id-1', expires_at: null, max_redemptions: 100, current_redemptions: 10 },
-          }),
-        })),
-      }));
-
-      // 2. Mock do insert na tabela de redemptions e na tabela de visitor_events
-      mockInsert.mockImplementationOnce(() => Promise.resolve({ error: null })); // For coupon_redemptions
-      mockInsert.mockImplementationOnce(() => Promise.resolve({ error: null })); // For visitor_events
- 
-      // 3. Mock do update do contador de redemptions
-      mockUpdate.mockImplementationOnce(() => ({
-        eq: () => Promise.resolve({ error: null }),
-      }));
- 
+  describe('POST coupon redemption (legacy/deprecated endpoint)', () => {
+    it('deve retornar erro 410 Gone informando que o sistema de cupom foi desativado', async () => {
       const req = new Request('http://localhost/api/portal/campaigns', {
         method: 'POST',
-        body: JSON.stringify({ coupon_id: 'coupon-id-1', visitor_id: 'visitor-id-1' }),
-      });
- 
-      const res = await POST(req);
-      expect(res.status).toBe(200);
-      const data = await res.json();
-      expect(data.success).toBe(true);
- 
-      expect(mockInsert).toHaveBeenCalledTimes(2);
-      expect(mockUpdate).toHaveBeenCalledTimes(1);
-    });
-
-    it('deve retornar erro 400 se o cupom estiver expirado', async () => {
-      // Mock do cupom expirado
-      const yesterday = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString();
-      mockSelect.mockImplementationOnce(() => ({
-        select: vi.fn(),
-        eq: vi.fn().mockImplementationOnce(() => ({
-          single: () => Promise.resolve({
-            data: { id: 'coupon-exp', expires_at: yesterday, max_redemptions: 100, current_redemptions: 10 },
-          }),
-        })),
-      }));
-
-      const req = new Request('http://localhost/api/portal/campaigns', {
-        method: 'POST',
-        body: JSON.stringify({ coupon_id: 'coupon-exp', visitor_id: 'visitor-id-1' }),
+        body: JSON.stringify({ coupon_id: 'coupon-1', visitor_id: 'visitor-1' }),
       });
 
-      const res = await POST(req);
-      expect(res.status).toBe(400);
+      const res = await POST();
+      expect(res.status).toBe(410);
       const data = await res.json();
-      expect(data.error).toContain('já expirou');
+      expect(data.error).toBe('O sistema de resgate de cupons foi desativado.');
     });
   });
 });
