@@ -499,8 +499,9 @@ export function CampaignsManager() {
             </div>
 
             <div className="space-y-2">
-              <label className="block text-sm font-semibold text-slate-700">Tipo de Campanha *</label>
+              <label className="block text-sm font-semibold text-slate-700" htmlFor="campaign-type-select">Tipo de Campanha *</label>
               <select
+                id="campaign-type-select"
                 value={type}
                 onChange={(e) => setType(e.target.value as any)}
                 className="w-full px-4 py-2.5 rounded-xl border border-slate-200 focus:ring-2 focus:ring-blue-500/30 focus:outline-none text-slate-900 bg-slate-50/50 text-sm font-medium"

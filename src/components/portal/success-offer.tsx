@@ -526,13 +526,17 @@ export function SuccessOffer({ settings, visitorId, visitorName, authUrl, openNd
               <div className="p-4 text-left">
                 {settings.post_signup_promo_title && <h3 className="font-bold text-sm text-slate-900 mb-1">{settings.post_signup_promo_title}</h3>}
                 {settings.post_signup_promo_description && <p className="text-xs text-slate-600 mb-3">{settings.post_signup_promo_description}</p>}
-                {settings.post_signup_promo_button_text && (
+                {settings.post_signup_promo_button_text && settings.post_signup_promo_button_url ? (
                   <button 
                     onClick={handleMarketingRedirect}
                     className="w-full py-2.5 rounded-lg bg-blue-50 hover:bg-blue-100 text-blue-700 text-xs font-bold transition-colors border border-blue-200"
                   >
                     {settings.post_signup_promo_button_text}
                   </button>
+                ) : (
+                  <div className="w-full py-3 bg-amber-50 border border-amber-200 text-amber-800 rounded-xl text-xs font-semibold text-center">
+                    📋 Apresente esta tela ao atendente para receber a oferta.
+                  </div>
                 )}
               </div>
             )}
