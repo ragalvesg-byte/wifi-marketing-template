@@ -359,18 +359,16 @@ export function SuccessOffer({ settings, visitorId, visitorName, authUrl, openNd
         setBannerVisible(true);
       }
 
-      if (settings.post_signup_redirect_mode === 'NONE') {
-        // Redireciona imediatamente sem mostrar contador
-        handleMarketingRedirect();
-      } else if (
-        settings.post_signup_redirect_mode === 'AUTO_3S' ||
-        settings.post_signup_redirect_mode === 'AUTO_5S' ||
-        settings.post_signup_redirect_mode === 'AUTO_10S'
-      ) {
-        const delay = settings.post_signup_redirect_seconds || 3;
-        setTimeLeft(delay);
+      if (settings.post_signup_redirect_mode === 'AUTO_3S') {
+        setTimeLeft(3);
+      } else if (settings.post_signup_redirect_mode === 'AUTO_5S') {
+        setTimeLeft(5);
+      } else if (settings.post_signup_redirect_mode === 'AUTO_10S') {
+        setTimeLeft(10);
+      } else {
+        // Para NONE e ON_CLICK, garante que o timer está inativo (null) e não redireciona
+        setTimeLeft(null);
       }
-      // Se for ON_CLICK, não inicia contador automático
     }
   }, [authState, loadingCampaigns, settings, activePromoCampaign]);
 

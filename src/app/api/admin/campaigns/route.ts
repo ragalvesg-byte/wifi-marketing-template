@@ -180,7 +180,7 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: 'Não autorizado' }, { status: 401 });
     }
 
-    // Transação manual usando múltiplos inserts via supabase client
+    // Operações sequenciais (não atômicas) usando múltiplos inserts com rollback de compensação manual via supabase client
     // 1. Inserir Campanha
     const { data: campaign, error: campaignError } = await supabase
       .from('campaigns')
@@ -381,7 +381,110 @@ export async function PUT(request: Request) {
       return NextResponse.json({ error: 'Não autorizado' }, { status: 401 });
     }
 
-    // 1. Atualizar Campanha
+    // Busca estado anterior para caso de rollback (compensação de falha parcial)
+    const { data: prevCampaign, error: fetchCampError } = await supabase
+      .from('campaigns')
+      .select('*')
+      .eq('id', id)
+      .maybeSingle();
+
+    if (fetchCampError || !prevCampaign) {
+      console.error('Erro ao buscar campanha anterior para edição:', fetchCampError);
+      return NextResponse.json({ error: 'Campanha não encontrada para edição.' }, { status: 404 });
+    }
+
+    const { data: prevAudience } = await supabase
+      .from('campaign_audiences')
+      .select('*')
+      .eq('campaign_id', id)
+      .maybeSingle();
+
+    const { data: prevCoupon } = await supabase
+      .from('coupons')
+      .select('*')
+      .eq('campaign_id', id)
+      .maybeSingle();
+
+    // Função de rollback manual para tratar falhas parciais (operações sequenciais)
+    const runRollback = async () => {
+      console.warn(`[Rollback] Iniciando reversão manual das alterações da campanha ${id} devido a falha parcial...`);
+      try {
+        // Reverte alteração da campanha
+        await supabase
+          .from('campaigns')
+          .update({
+            title: prevCampaign.title,
+            description: prevCampaign.description,
+            type: prevCampaign.type,
+            status: prevCampaign.status,
+            media_url: prevCampaign.media_url,
+            media_type: prevCampaign.media_type,
+            aspect_ratio: prevCampaign.aspect_ratio,
+            button_text: prevCampaign.button_text,
+            button_url: prevCampaign.button_url,
+            start_date: prevCampaign.start_date,
+            end_date: prevCampaign.end_date,
+            updated_at: prevCampaign.updated_at,
+          })
+          .eq('id', id);
+
+        // Reverte alteração de público
+        if (prevAudience) {
+          await supabase
+            .from('campaign_audiences')
+            .update({ target_type: prevAudience.target_type, rules: prevAudience.rules })
+            .eq('campaign_id', id);
+        } else {
+          await supabase
+            .from('campaign_audiences')
+            .delete()
+            .eq('campaign_id', id);
+        }
+
+        // Reverte alteração de cupom
+        if (prevCoupon) {
+          const { data: currentCoupon } = await supabase
+            .from('coupons')
+            .select('id')
+            .eq('campaign_id', id)
+            .maybeSingle();
+
+          if (currentCoupon) {
+            await supabase
+              .from('coupons')
+              .update({
+                code: prevCoupon.code,
+                discount_type: prevCoupon.discount_type,
+                discount_value: prevCoupon.discount_value,
+                max_redemptions: prevCoupon.max_redemptions,
+                expires_at: prevCoupon.expires_at,
+              })
+              .eq('campaign_id', id);
+          } else {
+            await supabase
+              .from('coupons')
+              .insert({
+                campaign_id: id,
+                code: prevCoupon.code,
+                discount_type: prevCoupon.discount_type,
+                discount_value: prevCoupon.discount_value,
+                max_redemptions: prevCoupon.max_redemptions,
+                expires_at: prevCoupon.expires_at,
+              });
+          }
+        } else {
+          await supabase
+            .from('coupons')
+            .delete()
+            .eq('campaign_id', id);
+        }
+        console.log(`[Rollback] Reversão manual concluída com sucesso para campanha ${id}.`);
+      } catch (rollbackErr) {
+        console.error('[Rollback Critical] Erro catastrófico ao reverter alterações no banco:', rollbackErr);
+      }
+    };
+
+    // 1. Atualizar Campanha (Operação sequencial 1)
     const { error: campaignError } = await supabase
       .from('campaigns')
       .update({
@@ -405,7 +508,7 @@ export async function PUT(request: Request) {
       return NextResponse.json({ error: 'Erro ao atualizar campanha no banco.' }, { status: 500 });
     }
 
-    // 2. Atualizar ou inserir público
+    // 2. Atualizar ou inserir público (Operação sequencial 2)
     const { data: existingAudience } = await supabase
       .from('campaign_audiences')
       .select('id')
@@ -420,7 +523,8 @@ export async function PUT(request: Request) {
 
       if (audError) {
         console.error('Erro ao atualizar regras de público:', audError);
-        return NextResponse.json({ error: 'Erro ao atualizar regras de público.' }, { status: 500 });
+        await runRollback();
+        return NextResponse.json({ error: 'Erro ao atualizar regras de público. Alterações revertidas.' }, { status: 500 });
       }
     } else {
       const { error: audError } = await supabase
@@ -429,11 +533,12 @@ export async function PUT(request: Request) {
 
       if (audError) {
         console.error('Erro ao inserir regras de público:', audError);
-        return NextResponse.json({ error: 'Erro ao inserir regras de público.' }, { status: 500 });
+        await runRollback();
+        return NextResponse.json({ error: 'Erro ao inserir regras de público. Alterações revertidas.' }, { status: 500 });
       }
     }
 
-    // 3. Atualizar Cupom
+    // 3. Atualizar Cupom (Operação sequencial 3)
     if (type === 'COUPON' && coupon_code) {
       const { data: existingCoupon } = await supabase
         .from('coupons')
@@ -455,7 +560,8 @@ export async function PUT(request: Request) {
 
         if (couponError) {
           console.error('Erro ao atualizar cupom:', couponError);
-          return NextResponse.json({ error: 'Erro ao atualizar cupom (código duplicado ou inválido).' }, { status: 500 });
+          await runRollback();
+          return NextResponse.json({ error: 'Erro ao atualizar cupom (código duplicado ou inválido). Alterações revertidas.' }, { status: 500 });
         }
       } else {
         const { error: couponError } = await supabase
@@ -471,12 +577,18 @@ export async function PUT(request: Request) {
 
         if (couponError) {
           console.error('Erro ao inserir cupom:', couponError);
-          return NextResponse.json({ error: 'Erro ao criar cupom para a campanha.' }, { status: 500 });
+          await runRollback();
+          return NextResponse.json({ error: 'Erro ao criar cupom para a campanha. Alterações revertidas.' }, { status: 500 });
         }
       }
     } else {
       // Se não for campanha de cupom, remove qualquer cupom associado
-      await supabase.from('coupons').delete().eq('campaign_id', id);
+      const { error: deleteCouponError } = await supabase.from('coupons').delete().eq('campaign_id', id);
+      if (deleteCouponError) {
+        console.error('Erro ao deletar cupom associado na mudança de tipo:', deleteCouponError);
+        await runRollback();
+        return NextResponse.json({ error: 'Erro ao remover cupom antigo da campanha. Alterações revertidas.' }, { status: 500 });
+      }
     }
 
     return NextResponse.json({ success: true, isDemo: false });
