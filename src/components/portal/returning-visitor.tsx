@@ -3,12 +3,13 @@
 import React, { useState } from 'react';
 import { StoreSettings, OpenNdsParams, Visitor } from '@/types/database';
 import { Wifi, Sparkles, ArrowRight, Loader2, Info } from 'lucide-react';
+import { getAnonymousSessionId } from '@/lib/events';
 
 interface ReturningVisitorProps {
   settings: StoreSettings;
   visitor: Visitor;
   openNdsParams: OpenNdsParams;
-  onSuccess: (data: { visitorName: string; authUrl: string; totalVisits: number }) => void;
+  onSuccess: (data: { visitorId?: string | null; visitorName: string; authUrl: string; totalVisits: number }) => void;
 }
 
 export function ReturningVisitor({ settings, visitor, openNdsParams, onSuccess }: ReturningVisitorProps) {
@@ -32,12 +33,14 @@ export function ReturningVisitor({ settings, visitor, openNdsParams, onSuccess }
           gateway_name: openNdsParams.gatewayname,
           gatewayaddress: openNdsParams.gatewayaddress,
           gatewayport: openNdsParams.gatewayport,
+          anonymous_session_id: getAnonymousSessionId(),
         }),
       });
 
       const data = await res.json();
 
       onSuccess({
+        visitorId: visitor.id,
         visitorName: visitor.name,
         authUrl: data.authUrl,
         totalVisits: (visitor.total_visits || 1) + 1,

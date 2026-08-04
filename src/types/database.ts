@@ -147,6 +147,7 @@ export interface RegisterVisitorPayload {
   gateway_name?: string;
   gatewayaddress?: string;
   gatewayport?: string;
+  anonymous_session_id?: string;
 }
 
 export interface DashboardMetrics {
@@ -160,3 +161,24 @@ export interface DashboardMetrics {
   peakDays: { day: string; visits: number }[];
   deviceBreakdown?: { category: string; count: number }[];
 }
+
+export type VisitorEventType =
+  | 'PORTAL_VIEWED'
+  | 'VISITOR_REGISTERED'
+  | 'VISITOR_RETURNED'
+  | 'WIFI_AUTH_SENT'
+  | 'INSTAGRAM_CLICKED'
+  | 'MENU_CLICKED'
+  | 'GOOGLE_REVIEW_CLICKED';
+
+export interface VisitorEvent {
+  id?: string;
+  event_type: VisitorEventType;
+  visitor_id?: string | null;
+  wifi_session_id?: string | null;
+  campaign_id?: string | null;
+  anonymous_session_id?: string | null;
+  metadata?: Record<string, any>;
+  created_at?: string;
+}
+

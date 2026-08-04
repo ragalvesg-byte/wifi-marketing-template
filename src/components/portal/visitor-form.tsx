@@ -4,11 +4,12 @@ import React, { useState } from 'react';
 import { formatPhoneNumber } from '@/lib/utils';
 import { StoreSettings, OpenNdsParams } from '@/types/database';
 import { Wifi, ShieldCheck, ArrowRight, Loader2, Info } from 'lucide-react';
+import { getAnonymousSessionId } from '@/lib/events';
 
 interface VisitorFormProps {
   settings: StoreSettings;
   openNdsParams: OpenNdsParams;
-  onSuccess: (data: { visitorName: string; authUrl: string; totalVisits: number }) => void;
+  onSuccess: (data: { visitorId?: string | null; visitorName: string; authUrl: string; totalVisits: number }) => void;
   onBack?: () => void;
 }
 
@@ -86,6 +87,7 @@ export function VisitorForm({ settings, openNdsParams, onSuccess, onBack }: Visi
           gateway_name: openNdsParams.gatewayname,
           gatewayaddress: openNdsParams.gatewayaddress,
           gatewayport: openNdsParams.gatewayport,
+          anonymous_session_id: getAnonymousSessionId(),
         }),
       });
 
@@ -98,6 +100,7 @@ export function VisitorForm({ settings, openNdsParams, onSuccess, onBack }: Visi
       }
 
       onSuccess({
+        visitorId: data.visitorId || null,
         visitorName: data.visitorName || name,
         authUrl: data.authUrl,
         totalVisits: data.totalVisits || 1,

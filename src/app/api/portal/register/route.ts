@@ -101,6 +101,8 @@ export async function POST(request: Request) {
     let visitorId: string = 'v-demo-visitor';
     let totalVisits = 1;
 
+    let isNewVisitor = false;
+
     if (supabase) {
       // 1. Buscar se o visitante já existe pelo telefone
       const { data: existingVisitor } = await supabase
@@ -126,6 +128,7 @@ export async function POST(request: Request) {
           })
           .eq('id', visitorId);
       } else {
+        isNewVisitor = true;
         const { data: newVisitor, error: insertError } = await supabase
           .from('visitors')
           .insert({
@@ -162,16 +165,47 @@ export async function POST(request: Request) {
         );
       }
 
-      // 3. Registrar a sessão de Wi-Fi
+      // 3. Registrar a sessão de Wi-Fi e obter ID da sessão
+      let wifiSessionId: string | null = null;
       if (visitorId) {
-        await supabase.from('wifi_sessions').insert({
-          visitor_id: visitorId,
-          mac_address: validMac || '00:00:00:00:00:00',
-          ip_address: body.ip_address || null,
-          opennds_tok: body.tok || null,
-          gateway_name: body.gateway_name || 'Loja_WiFi',
-          status: 'ACTIVE',
-        });
+        const { data: newSession, error: sessionError } = await supabase
+          .from('wifi_sessions')
+          .insert({
+            visitor_id: visitorId,
+            mac_address: validMac || '00:00:00:00:00:00',
+            ip_address: body.ip_address || null,
+            opennds_tok: body.tok || null,
+            gateway_name: body.gateway_name || 'Loja_WiFi',
+            status: 'ACTIVE',
+          })
+          .select('id')
+          .single();
+
+        if (sessionError) {
+          console.error('Erro ao criar sessão Wi-Fi no Supabase:', sessionError);
+        } else if (newSession) {
+          wifiSessionId = newSession.id;
+        }
+      }
+
+      // 3.5 Registrar evento do pipeline de forma segura no servidor
+      if (visitorId) {
+        const { error: eventError } = await supabase
+          .from('visitor_events')
+          .insert({
+            event_type: isNewVisitor ? 'VISITOR_REGISTERED' : 'VISITOR_RETURNED',
+            visitor_id: visitorId,
+            wifi_session_id: wifiSessionId,
+            anonymous_session_id: body.anonymous_session_id || null,
+            metadata: {
+              method: isNewVisitor ? 'registration_form' : 'form_submit',
+              total_visits: totalVisits
+            }
+          });
+
+        if (eventError) {
+          console.error('Erro ao registrar evento de cadastro/retorno no Supabase:', eventError);
+        }
       }
     }
 
@@ -209,6 +243,7 @@ export async function POST(request: Request) {
       success: true,
       authUrl,
       visitorName: body.name.trim(),
+      visitorId,
       totalVisits,
       isDemoMode: !isRealRouterMode,
       message: !isRealRouterMode

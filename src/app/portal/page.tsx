@@ -9,6 +9,7 @@ import { parseOpenNdsParams } from '@/lib/opennds';
 import { MOCK_STORE_SETTINGS, NEUTRAL_STORE_SETTINGS } from '@/lib/supabase/mock-data';
 import { StoreSettings, OpenNdsParams, Visitor } from '@/types/database';
 import { Loader2 } from 'lucide-react';
+import { sendVisitorEvent } from '@/lib/events';
 
 interface PortalPageProps {
   searchParams: Promise<{ [key: string]: string | string[] | undefined }>;
@@ -24,10 +25,12 @@ export default function PortalPage({ searchParams }: PortalPageProps) {
   // Estado de fluxo da tela
   const [step, setStep] = useState<'LANDING' | 'FORM' | 'RETURNING' | 'SUCCESS'>('LANDING');
   const [successData, setSuccessData] = useState<{
+    visitorId?: string | null;
     visitorName: string;
     authUrl: string;
     totalVisits: number;
   }>({
+    visitorId: null,
     visitorName: '',
     authUrl: '',
     totalVisits: 1,
@@ -36,6 +39,9 @@ export default function PortalPage({ searchParams }: PortalPageProps) {
   useEffect(() => {
     const params = parseOpenNdsParams(resolvedParams);
     setOpenNdsParams(params);
+
+    // Dispara evento PORTAL_VIEWED de forma assíncrona
+    sendVisitorEvent('PORTAL_VIEWED');
 
     const checkDeviceAndSettings = async () => {
       setCheckingMac(true);
@@ -67,6 +73,14 @@ export default function PortalPage({ searchParams }: PortalPageProps) {
               setKnownVisitor(data.visitor);
               setStep('RETURNING');
               setCheckingMac(false);
+              // Registrar VISITOR_RETURNED somente quando o visitante for efetivamente reconhecido
+              sendVisitorEvent('VISITOR_RETURNED', {
+                visitor_id: data.visitor.id,
+                metadata: {
+                  method: 'mac_check',
+                  total_visits: data.visitor.total_visits,
+                }
+              });
               return;
             }
           }
@@ -88,7 +102,7 @@ export default function PortalPage({ searchParams }: PortalPageProps) {
     checkDeviceAndSettings();
   }, [resolvedParams]);
 
-  const handleSuccess = (data: { visitorName: string; authUrl: string; totalVisits: number }) => {
+  const handleSuccess = (data: { visitorId?: string | null; visitorName: string; authUrl: string; totalVisits: number }) => {
     setSuccessData(data);
     setStep('SUCCESS');
   };
@@ -115,6 +129,7 @@ export default function PortalPage({ searchParams }: PortalPageProps) {
       ) : step === 'SUCCESS' ? (
         <SuccessOffer
           settings={settings}
+          visitorId={successData.visitorId}
           visitorName={successData.visitorName}
           authUrl={successData.authUrl}
           openNdsParams={openNdsParams}

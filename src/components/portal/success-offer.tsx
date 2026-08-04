@@ -3,9 +3,11 @@
 import React, { useState, useEffect } from 'react';
 import { StoreSettings, OpenNdsParams } from '@/types/database';
 import { CheckCircle2, Copy, Check, ExternalLink, Star, Camera, Utensils, Loader2, AlertCircle, X, Wifi, WifiOff } from 'lucide-react';
+import { sendVisitorEvent } from '@/lib/events';
 
 interface SuccessOfferProps {
   settings: StoreSettings;
+  visitorId?: string | null;
   visitorName: string;
   authUrl: string;
   openNdsParams: OpenNdsParams;
@@ -203,9 +205,14 @@ export function CountdownRedirect({
 
 interface SecondaryActionsProps {
   settings: StoreSettings;
+  visitorId?: string | null;
 }
 
-export function SecondaryActions({ settings }: SecondaryActionsProps) {
+export function SecondaryActions({ settings, visitorId }: SecondaryActionsProps) {
+  const handleActionClick = (type: 'INSTAGRAM_CLICKED' | 'MENU_CLICKED' | 'GOOGLE_REVIEW_CLICKED') => {
+    sendVisitorEvent(type, { visitor_id: visitorId });
+  };
+
   return (
     <div className="grid grid-cols-1 gap-3 pt-4">
       {settings.post_signup_show_instagram && settings.instagram_url && (
@@ -213,6 +220,7 @@ export function SecondaryActions({ settings }: SecondaryActionsProps) {
           href={settings.instagram_url}
           target="_blank"
           rel="noopener noreferrer"
+          onClick={() => handleActionClick('INSTAGRAM_CLICKED')}
           className="w-full p-3.5 bg-gradient-to-r from-purple-500 to-pink-500 text-white rounded-xl text-sm font-bold flex items-center justify-center gap-2 shadow-md hover:opacity-95 transition-opacity"
         >
           <Camera className="w-5 h-5" /> Siga nosso Instagram
@@ -224,6 +232,7 @@ export function SecondaryActions({ settings }: SecondaryActionsProps) {
           href={settings.menu_url}
           target="_blank"
           rel="noopener noreferrer"
+          onClick={() => handleActionClick('MENU_CLICKED')}
           className="w-full p-3.5 bg-slate-900 text-white rounded-xl text-sm font-bold flex items-center justify-center gap-2 shadow-md hover:bg-slate-800 transition-colors"
         >
           <Utensils className="w-5 h-5 text-amber-400" /> Ver Cardápio
@@ -235,6 +244,7 @@ export function SecondaryActions({ settings }: SecondaryActionsProps) {
           href={settings.google_review_url}
           target="_blank"
           rel="noopener noreferrer"
+          onClick={() => handleActionClick('GOOGLE_REVIEW_CLICKED')}
           className="w-full p-3.5 bg-amber-50 border border-amber-200 text-amber-900 rounded-xl text-sm font-bold flex items-center justify-center gap-2 shadow-sm hover:bg-amber-100 transition-colors"
         >
           <Star className="w-5 h-5 text-amber-500" /> Avaliar no Google
@@ -248,7 +258,7 @@ export function SecondaryActions({ settings }: SecondaryActionsProps) {
 // Componente Principal
 // ==========================================
 
-export function SuccessOffer({ settings, visitorName, authUrl, openNdsParams }: SuccessOfferProps) {
+export function SuccessOffer({ settings, visitorId, visitorName, authUrl, openNdsParams }: SuccessOfferProps) {
   const [copied, setCopied] = useState(false);
   const [authState, setAuthState] = useState<'AUTHORIZING' | 'AUTHORIZED' | 'FAILED'>('AUTHORIZING');
   const [bannerVisible, setBannerVisible] = useState(false);
@@ -273,6 +283,13 @@ export function SuccessOffer({ settings, visitorName, authUrl, openNdsParams }: 
         await fetch(authUrl, { mode: 'no-cors', cache: 'no-store' });
         if (isMounted) {
           setAuthState('AUTHORIZED');
+          sendVisitorEvent('WIFI_AUTH_SENT', {
+            visitor_id: visitorId,
+            metadata: {
+              auth_url: authUrl,
+              gateway: openNdsParams.gatewayname || 'unknown'
+            }
+          });
         }
       } catch (err) {
         console.error('Falha ao enviar autorização ao roteador', err);
@@ -450,7 +467,7 @@ export function SuccessOffer({ settings, visitorName, authUrl, openNdsParams }: 
           </div>
         )}
 
-        <SecondaryActions settings={settings} />
+        <SecondaryActions settings={settings} visitorId={visitorId} />
 
         <CountdownRedirect
           timeLeft={timeLeft}
