@@ -41,6 +41,8 @@ export function generateFasLevel3Token(tok: string, fasKey?: string): string {
 
 /**
  * Normaliza e valida rigorosamente os parâmetros enviados pelo openNDS FAS na Query String.
+ * Modo Real exige a presença simultânea de: tok, clientmac, clientip, gatewayaddress e gatewayport.
+ * Caso falte qualquer parâmetro obrigatório, o portal opera em Modo Demonstração.
  */
 export function parseOpenNdsParams(searchParams: { [key: string]: string | string[] | undefined }): OpenNdsParams {
   const getSingle = (val: string | string[] | undefined): string | undefined => {
@@ -60,9 +62,12 @@ export function parseOpenNdsParams(searchParams: { [key: string]: string | strin
   const clientmac = isValidMac(rawMac) ? rawMac!.toLowerCase() : undefined;
   const clientip = isValidIp(rawIp) ? rawIp : undefined;
   
-  // Valida e sanitiza o endereço e porta do gateway
-  const gatewayaddress = isValidIp(rawGwAddress) ? rawGwAddress : (process.env.OPENNDS_DEFAULT_GATEWAY_IP || "192.168.1.1");
-  const gatewayport = rawGwPort && /^\d+$/.test(rawGwPort) ? rawGwPort : (process.env.OPENNDS_DEFAULT_GATEWAY_PORT || "2050");
+  // Valida gatewayaddress e gatewayport APENAS se fornecidos explicitamente (Sem fallback padrão IP/Porta)
+  const gatewayaddress = isValidIp(rawGwAddress) ? rawGwAddress : undefined;
+  const gatewayport = rawGwPort && /^\d+$/.test(rawGwPort) ? rawGwPort : undefined;
+
+  // Modo real é ativado estritamente quando TODOS os 5 parâmetros essenciais do openNDS estão presentes e válidos
+  const isRealMode = Boolean(tok && clientmac && clientip && gatewayaddress && gatewayport);
 
   return {
     tok,
@@ -72,12 +77,13 @@ export function parseOpenNdsParams(searchParams: { [key: string]: string | strin
     gatewayaddress,
     gatewayport,
     redir,
+    isRealMode,
   };
 }
 
 /**
  * Constrói a URL oficial de autorização e liberação do openNDS no roteador OpenWrt.
- * Suporta fas_secure_enabled 1, 2 e 3 (com assinatura HMAC via OPENNDS_FAS_KEY).
+ * Retorna string vazia ("") caso faltem parâmetros reais obrigatórios.
  */
 export function buildOpenNdsAuthUrl(params: {
   gatewayaddress?: string;
@@ -86,15 +92,15 @@ export function buildOpenNdsAuthUrl(params: {
   redir?: string;
   fasKey?: string;
 }): string {
-  const gwIp = isValidIp(params.gatewayaddress)
-    ? params.gatewayaddress
-    : (process.env.OPENNDS_DEFAULT_GATEWAY_IP || "192.168.1.1");
-  
-  const gwPort = params.gatewayport && /^\d+$/.test(params.gatewayport)
-    ? params.gatewayport
-    : (process.env.OPENNDS_DEFAULT_GATEWAY_PORT || "2050");
+  if (!params.gatewayaddress || !isValidIp(params.gatewayaddress) ||
+      !params.gatewayport || !/^\d+$/.test(params.gatewayport) ||
+      !params.tok) {
+    return "";
+  }
 
-  const rawTok = sanitizeToken(params.tok) || "simulated_token";
+  const gwIp = params.gatewayaddress;
+  const gwPort = params.gatewayport;
+  const rawTok = sanitizeToken(params.tok) || params.tok;
   
   // Se a FAS KEY estiver configurada, aplica assinatura HMAC-SHA256 para FAS Nível 3
   const signedTok = generateFasLevel3Token(rawTok, params.fasKey);

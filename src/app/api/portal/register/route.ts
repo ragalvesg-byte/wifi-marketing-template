@@ -3,7 +3,7 @@ import { cookies } from 'next/headers';
 import { createAdminClient } from '@/lib/supabase/admin';
 import { cleanPhoneNumber } from '@/lib/utils';
 import { getRouterDriver } from '@/lib/routers';
-import { isValidMac } from '@/lib/opennds';
+import { isValidMac, isValidIp, sanitizeToken } from '@/lib/opennds';
 import { RegisterVisitorPayload } from '@/types/database';
 
 const rateLimitMap = new Map<string, { count: number; resetAt: number }>();
@@ -137,21 +137,31 @@ export async function POST(request: Request) {
 
     // 5. Utilizar a arquitetura de Driver de Roteador para construir a URL de liberação
     const routerDriver = getRouterDriver('opennds');
-    const authUrl = routerDriver.buildAuthUrl({
+    
+    // Modo real exige TODOS os 5 parâmetros válidos do openNDS
+    const isRealRouterMode = Boolean(
+      body.gatewayaddress && isValidIp(body.gatewayaddress) &&
+      body.gatewayport && /^\d+$/.test(body.gatewayport) &&
+      body.tok && sanitizeToken(body.tok) &&
+      body.mac_address && isValidMac(body.mac_address) &&
+      body.ip_address && isValidIp(body.ip_address)
+    );
+
+    const authUrl = isRealRouterMode ? routerDriver.buildAuthUrl({
       gatewayaddress: body.gatewayaddress,
       gatewayport: body.gatewayport,
       tok: body.tok,
-    });
+    }) : "";
 
     return NextResponse.json({
       success: true,
       authUrl,
       visitorName: body.name.trim(),
       totalVisits,
-      isDemo,
-      message: isDemo
-        ? 'Cadastro processado em Modo Demonstração (sem gravação no banco real).'
-        : 'Cadastro realizado com sucesso!',
+      isDemoMode: !isRealRouterMode,
+      message: !isRealRouterMode
+        ? 'Cadastro realizado com sucesso. Modo demonstração — roteador não conectado.'
+        : 'Autorização enviada ao roteador.',
     });
   } catch (error) {
     console.error('Erro no registro do visitante:', error);

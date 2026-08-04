@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { StoreSettings, OpenNdsParams } from '@/types/database';
-import { CheckCircle2, Tag, Copy, Check, ExternalLink, Star, Camera, Utensils, Loader2, AlertCircle, Map, X } from 'lucide-react';
+import { CheckCircle2, Tag, Copy, Check, ExternalLink, Star, Camera, Utensils, Loader2, AlertCircle, Map, X, Wifi, WifiOff } from 'lucide-react';
 import { buildOpenNdsAuthUrl } from '@/lib/opennds';
 
 interface SuccessOfferProps {
@@ -18,28 +18,28 @@ export function SuccessOffer({ settings, visitorName, authUrl, openNdsParams }: 
   const [bannerVisible, setBannerVisible] = useState(false);
   const [timeLeft, setTimeLeft] = useState<number | null>(null);
 
+  // Modo real é ativado somente se openNdsParams.isRealMode for true E houver authUrl válida
+  const isRealMode = Boolean(openNdsParams.isRealMode && authUrl);
+  const isDemoMode = !isRealMode;
+
   useEffect(() => {
     let isMounted = true;
-    const authorizeWifi = async () => {
-      const finalAuthUrl = authUrl || buildOpenNdsAuthUrl({
-        gatewayaddress: openNdsParams.gatewayaddress,
-        gatewayport: openNdsParams.gatewayport,
-        tok: openNdsParams.tok,
-      });
 
-      if (!finalAuthUrl) {
+    const authorizeWifi = async () => {
+      // Se estiver em modo demonstração: NÃO faz fetch para o roteador e NÃO exibe falha de liberação
+      if (isDemoMode || !authUrl) {
         if (isMounted) setAuthState('AUTHORIZED');
         return;
       }
 
+      // No modo real: envia autorização para o IP/porta do roteador openNDS
       try {
-        await fetch(finalAuthUrl, { mode: 'no-cors', cache: 'no-store' });
-        
+        await fetch(authUrl, { mode: 'no-cors', cache: 'no-store' });
         if (isMounted) {
           setAuthState('AUTHORIZED');
         }
       } catch (err) {
-        console.error('Falha ao comunicar com o roteador', err);
+        console.error('Falha ao enviar autorização ao roteador', err);
         if (isMounted) {
           setAuthState('FAILED');
         }
@@ -51,7 +51,7 @@ export function SuccessOffer({ settings, visitorName, authUrl, openNdsParams }: 
     return () => {
       isMounted = false;
     };
-  }, [authUrl, openNdsParams]);
+  }, [authUrl, isDemoMode]);
 
   useEffect(() => {
     if (authState === 'AUTHORIZED') {
@@ -120,25 +120,24 @@ export function SuccessOffer({ settings, visitorName, authUrl, openNdsParams }: 
   };
 
   const primaryColor = settings.primary_color || '#2563eb';
-  const isDemo = !authUrl && (!openNdsParams.tok && !openNdsParams.gatewayaddress);
 
-  if (authState === 'AUTHORIZING') {
+  if (authState === 'AUTHORIZING' && isRealMode) {
     return (
       <div className="w-full max-w-md bg-white/95 backdrop-blur-md text-slate-900 rounded-3xl shadow-2xl overflow-hidden border border-white/20 p-8 text-center space-y-4 animate-in fade-in zoom-in-95">
         <Loader2 className="w-12 h-12 text-blue-600 animate-spin mx-auto" />
-        <h2 className="text-xl font-bold">Liberando seu acesso...</h2>
-        <p className="text-sm text-slate-500">Comunicando com o roteador da loja.</p>
+        <h2 className="text-xl font-bold">Enviando autorização ao roteador...</h2>
+        <p className="text-sm text-slate-500">Comunicando com o gateway openNDS.</p>
       </div>
     );
   }
 
-  if (authState === 'FAILED') {
+  if (authState === 'FAILED' && isRealMode) {
     return (
       <div className="w-full max-w-md bg-white/95 backdrop-blur-md text-slate-900 rounded-3xl shadow-2xl overflow-hidden border border-white/20 p-8 text-center space-y-4 animate-in fade-in zoom-in-95">
         <AlertCircle className="w-12 h-12 text-rose-500 mx-auto" />
         <h2 className="text-xl font-bold">Falha na Liberação</h2>
         <p className="text-sm text-slate-500 mb-4">
-          Não foi possível confirmar a liberação com o roteador Wi-Fi. Isso pode ocorrer se você já estiver conectado ou se houver um bloqueio na rede.
+          Não foi possível enviar o pacote de autorização ao roteador Wi-Fi. Verifique a conexão com o gateway local.
         </p>
         <button
           onClick={() => window.location.reload()}
@@ -154,9 +153,15 @@ export function SuccessOffer({ settings, visitorName, authUrl, openNdsParams }: 
     <>
       <div className={`w-full max-w-md bg-white/95 backdrop-blur-md text-slate-900 rounded-3xl shadow-2xl overflow-hidden border border-white/20 p-6 sm:p-8 text-center space-y-4 animate-in fade-in zoom-in-95 transition-all ${bannerVisible ? 'blur-sm scale-95 opacity-50' : ''}`}>
         
-        {isDemo && (
-          <div className="bg-blue-100 text-blue-800 text-xs font-bold py-1 px-3 rounded-full mb-2 inline-block">
-            Modo Demonstração
+        {isDemoMode ? (
+          <div className="bg-amber-50 border border-amber-200 text-amber-900 text-xs font-semibold py-2 px-4 rounded-xl mb-2 flex items-center justify-center gap-1.5 mx-auto">
+            <WifiOff className="w-4 h-4 text-amber-600 shrink-0" />
+            <span>Cadastro realizado com sucesso. Modo demonstração — roteador não conectado.</span>
+          </div>
+        ) : (
+          <div className="bg-blue-50 border border-blue-200 text-blue-800 text-xs font-semibold py-2 px-4 rounded-xl mb-2 flex items-center justify-center gap-1.5 mx-auto">
+            <Wifi className="w-4 h-4 text-blue-600 shrink-0" />
+            <span>Autorização enviada ao roteador</span>
           </div>
         )}
 
@@ -165,9 +170,9 @@ export function SuccessOffer({ settings, visitorName, authUrl, openNdsParams }: 
         </div>
 
         <div>
-          <h1 className="text-2xl font-extrabold text-slate-900">{settings.post_signup_title || 'Wi-Fi Liberado!'}</h1>
+          <h1 className="text-2xl font-extrabold text-slate-900">{settings.post_signup_title || 'Cadastro Concluído!'}</h1>
           <p className="text-sm text-slate-600 mt-1">
-            {settings.post_signup_message || `Pronto, ${visitorName}! Sua navegação à internet foi autorizada.`}
+            {settings.post_signup_message || `Obrigado por se conectar, ${visitorName}!`}
           </p>
         </div>
 

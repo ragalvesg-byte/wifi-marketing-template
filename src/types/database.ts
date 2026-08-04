@@ -131,6 +131,7 @@ export interface OpenNdsParams {
   gatewayaddress?: string;
   gatewayport?: string;
   redir?: string;
+  isRealMode?: boolean;
 }
 
 export interface RegisterVisitorPayload {

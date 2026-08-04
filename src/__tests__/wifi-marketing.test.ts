@@ -68,6 +68,23 @@ describe('Auditoria de Testes — System Wifi Marketing Template', () => {
     expect(parsed.clientmac).toBe('aa:bb:cc:dd:ee:ff');
     expect(parsed.clientip).toBe('192.168.1.105');
     expect(parsed.gatewayname).toBe('Bistro_Wifi');
+    expect(parsed.isRealMode).toBe(true);
+  });
+
+  it('Deve retornar modo demonstração (isRealMode = false) se faltar parâmetro obrigatório do openNDS', () => {
+    const incompleteQuery = {
+      tok: 'token_teste_123',
+      gatewayname: 'Bistro_Wifi',
+      // Faltam clientmac, clientip, gatewayaddress, gatewayport
+    };
+
+    const parsed = parseOpenNdsParams(incompleteQuery);
+    expect(parsed.isRealMode).toBe(false);
+    expect(parsed.gatewayaddress).toBeUndefined();
+    expect(parsed.gatewayport).toBeUndefined();
+
+    const emptyAuthUrl = buildOpenNdsAuthUrl(parsed);
+    expect(emptyAuthUrl).toBe('');
   });
 
   it('Deve identificar se o visitante precisa recadastrar com base no intervalo da loja', () => {
