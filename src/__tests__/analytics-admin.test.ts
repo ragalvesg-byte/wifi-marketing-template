@@ -316,4 +316,52 @@ describe('Admin Analytics API Route', () => {
     expect(stringified).not.toContain('phone');
     expect(stringified).not.toContain('name');
   });
+
+  it('deve traduzir e derivar status de campanhas amigáveis (Ativa, Pausada, Rascunho, Finalizada)', async () => {
+    const mockEvents = [
+      { event_type: 'CAMPAIGN_VIEWED', campaign_id: 'camp-active', wifi_session_id: 'wifi-1' },
+      { event_type: 'CAMPAIGN_VIEWED', campaign_id: 'camp-paused', wifi_session_id: 'wifi-1' },
+      { event_type: 'CAMPAIGN_VIEWED', campaign_id: 'camp-draft', wifi_session_id: 'wifi-1' },
+      { event_type: 'CAMPAIGN_VIEWED', campaign_id: 'camp-expired', wifi_session_id: 'wifi-1' },
+      { event_type: 'CAMPAIGN_VIEWED', campaign_id: 'camp-ended-by-date', wifi_session_id: 'wifi-1' },
+    ];
+
+    const mockCampaignsList = [
+      { id: 'camp-active', title: 'Ativa Camp', status: 'ACTIVE', start_date: null, end_date: null },
+      { id: 'camp-paused', title: 'Pausada Camp', status: 'PAUSED', start_date: null, end_date: null },
+      { id: 'camp-draft', title: 'Rascunho Camp', status: 'DRAFT', start_date: null, end_date: null },
+      { id: 'camp-expired', title: 'Expirada Camp', status: 'EXPIRED', start_date: null, end_date: null },
+      { id: 'camp-ended-by-date', title: 'Finalizada por Data', status: 'ACTIVE', start_date: null, end_date: '2026-08-01T12:00:00Z' },
+    ];
+
+    mockSelect.mockImplementationOnce(() => ({
+      gte: () => ({
+        lte: () => Promise.resolve({ data: mockEvents, error: null })
+      })
+    }));
+
+    mockSelect.mockImplementationOnce(() => ({
+      gte: () => ({
+        lte: () => Promise.resolve({ data: [], error: null })
+      })
+    }));
+
+    mockSelect.mockImplementationOnce(() => Promise.resolve({ data: mockCampaignsList, error: null }));
+
+    const req = new Request('http://localhost/api/admin/analytics?startDate=2026-08-01&endDate=2026-08-04');
+    const res = await GET(req);
+    const data = await res.json();
+
+    const activeInfo = data.campaigns.find((c: any) => c.id === 'camp-active');
+    const pausedInfo = data.campaigns.find((c: any) => c.id === 'camp-paused');
+    const draftInfo = data.campaigns.find((c: any) => c.id === 'camp-draft');
+    const expiredInfo = data.campaigns.find((c: any) => c.id === 'camp-expired');
+    const endedByDateInfo = data.campaigns.find((c: any) => c.id === 'camp-ended-by-date');
+
+    expect(activeInfo.status).toBe('Ativa');
+    expect(pausedInfo.status).toBe('Pausada');
+    expect(draftInfo.status).toBe('Rascunho');
+    expect(expiredInfo.status).toBe('Finalizada');
+    expect(endedByDateInfo.status).toBe('Finalizada');
+  });
 });

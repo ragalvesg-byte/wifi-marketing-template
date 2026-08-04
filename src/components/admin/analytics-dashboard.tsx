@@ -330,7 +330,10 @@ export function AnalyticsDashboard() {
                         <td className="px-6 py-4 font-bold text-slate-800">{camp.title}</td>
                         <td className="px-6 py-4">
                           <span className={`inline-flex px-2 py-0.5 rounded-full text-[10px] font-bold ${
-                            camp.status === 'ACTIVE' ? 'bg-emerald-50 text-emerald-700' : 'bg-slate-100 text-slate-600'
+                            camp.status === 'Ativa' ? 'bg-emerald-50 text-emerald-700' :
+                            camp.status === 'Pausada' ? 'bg-amber-50 text-amber-700' :
+                            camp.status === 'Finalizada' ? 'bg-rose-50 text-rose-700' :
+                            'bg-slate-100 text-slate-600'
                           }`}>
                             {camp.status}
                           </span>

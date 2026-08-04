@@ -234,10 +234,30 @@ export async function GET(request: Request) {
     const campaignsStatsList = Array.from(campaignsPerformanceMap.entries()).map(([id, stats]) => {
       const dbCamp = campaignsMap.get(id);
       const ctr = stats.views > 0 ? (stats.clicks / stats.views) * 100 : 0;
+      
+      let friendlyStatus = 'UNKNOWN';
+      if (dbCamp) {
+        const now = new Date();
+        const endDate = dbCamp.end_date ? new Date(dbCamp.end_date) : null;
+        const statusValue = dbCamp.status;
+
+        if (statusValue === 'EXPIRED' || statusValue === 'ENDED' || (endDate && endDate < now)) {
+          friendlyStatus = 'Finalizada';
+        } else if (statusValue === 'ACTIVE') {
+          friendlyStatus = 'Ativa';
+        } else if (statusValue === 'PAUSED') {
+          friendlyStatus = 'Pausada';
+        } else if (statusValue === 'DRAFT') {
+          friendlyStatus = 'Rascunho';
+        } else {
+          friendlyStatus = statusValue || 'UNKNOWN';
+        }
+      }
+
       return {
         id,
         title: dbCamp?.title || 'Campanha Excluída ou Não Encontrada',
-        status: dbCamp?.status || 'UNKNOWN',
+        status: friendlyStatus,
         start_date: dbCamp?.start_date || null,
         end_date: dbCamp?.end_date || null,
         views: stats.views,
