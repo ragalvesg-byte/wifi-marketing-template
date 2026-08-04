@@ -2,8 +2,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { StoreSettings, OpenNdsParams } from '@/types/database';
-import { CheckCircle2, Tag, Copy, Check, ExternalLink, Star, Camera, Utensils, Loader2, AlertCircle, Map, X, Wifi, WifiOff } from 'lucide-react';
-import { buildOpenNdsAuthUrl } from '@/lib/opennds';
+import { CheckCircle2, Copy, Check, ExternalLink, Star, Camera, Utensils, Loader2, AlertCircle, X, Wifi, WifiOff } from 'lucide-react';
 
 interface SuccessOfferProps {
   settings: StoreSettings;
@@ -11,6 +10,243 @@ interface SuccessOfferProps {
   authUrl: string;
   openNdsParams: OpenNdsParams;
 }
+
+// ==========================================
+// Sub-componentes Refatorados (Etapa 3)
+// ==========================================
+
+interface AuthorizationGateProps {
+  authState: 'AUTHORIZING' | 'AUTHORIZED' | 'FAILED';
+  isRealMode: boolean;
+}
+
+export function AuthorizationGate({ authState, isRealMode }: AuthorizationGateProps) {
+  if (authState === 'AUTHORIZING' && isRealMode) {
+    return (
+      <div className="w-full max-w-md bg-white/95 backdrop-blur-md text-slate-900 rounded-3xl shadow-2xl overflow-hidden border border-white/20 p-8 text-center space-y-4 animate-in fade-in zoom-in-95">
+        <Loader2 className="w-12 h-12 text-blue-600 animate-spin mx-auto" />
+        <h2 className="text-xl font-bold">Enviando autorização ao roteador...</h2>
+        <p className="text-sm text-slate-500">Comunicando com o gateway openNDS.</p>
+      </div>
+    );
+  }
+
+  if (authState === 'FAILED' && isRealMode) {
+    return (
+      <div className="w-full max-w-md bg-white/95 backdrop-blur-md text-slate-900 rounded-3xl shadow-2xl overflow-hidden border border-white/20 p-8 text-center space-y-4 animate-in fade-in zoom-in-95">
+        <AlertCircle className="w-12 h-12 text-rose-500 mx-auto" />
+        <h2 className="text-xl font-bold">Falha na Liberação</h2>
+        <p className="text-sm text-slate-500 mb-4">
+          Não foi possível enviar o pacote de autorização ao roteador Wi-Fi. Verifique a conexão com o gateway local.
+        </p>
+        <button
+          onClick={() => window.location.reload()}
+          className="px-6 py-3 bg-slate-900 text-white rounded-xl font-bold text-sm shadow-md"
+        >
+          Tentar Novamente
+        </button>
+      </div>
+    );
+  }
+
+  return null;
+}
+
+interface PromoBannerProps {
+  visible: boolean;
+  settings: StoreSettings;
+  timeLeft: number | null;
+  primaryColor: string;
+  onCancel: () => void;
+  onRedirect: () => void;
+}
+
+export function PromoBanner({
+  visible,
+  settings,
+  timeLeft,
+  primaryColor,
+  onCancel,
+  onRedirect,
+}: PromoBannerProps) {
+  if (!visible) return null;
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 sm:p-6 bg-black/60 backdrop-blur-sm animate-in fade-in">
+      <div className="w-full max-w-md bg-white rounded-3xl shadow-2xl overflow-hidden relative flex flex-col animate-in zoom-in-95">
+        {settings.post_signup_banner_closable && (
+          <button 
+            onClick={onCancel}
+            className="absolute top-3 right-3 z-10 w-8 h-8 bg-black/50 hover:bg-black/70 text-white rounded-full flex items-center justify-center backdrop-blur-md transition-colors"
+          >
+            <X className="w-5 h-5" />
+          </button>
+        )}
+
+        {settings.post_signup_promo_image_url ? (
+           <div 
+              className="w-full bg-slate-100 relative" 
+              style={{
+                aspectRatio: settings.post_signup_promo_image_aspect_ratio === '9:16' ? '9/16' 
+                  : settings.post_signup_promo_image_aspect_ratio === '1:1' ? '1/1'
+                  : settings.post_signup_promo_image_aspect_ratio === '16:9' ? '16/9'
+                  : '4/5',
+                maxHeight: '60vh'
+              }}
+            >
+              <img src={settings.post_signup_promo_image_url} alt="Banner" className="w-full h-full object-cover" />
+            </div>
+        ) : (
+           <div className="w-full h-40 bg-gradient-to-br from-blue-500 to-purple-600 flex items-center justify-center text-white p-6">
+             <Star className="w-12 h-12 opacity-50" />
+           </div>
+        )}
+
+        <div className="p-6 bg-white flex-1 overflow-y-auto">
+           {settings.post_signup_promo_title && <h2 className="text-xl font-black text-slate-900 mb-2">{settings.post_signup_promo_title}</h2>}
+           {settings.post_signup_promo_description && <p className="text-sm text-slate-600 mb-6">{settings.post_signup_promo_description}</p>}
+           
+           {timeLeft !== null ? (
+             <div className="space-y-3">
+               <p className="text-xs font-bold text-center text-slate-500 mb-2">Redirecionando em {timeLeft} segundos...</p>
+               <button 
+                 onClick={onRedirect}
+                 style={{ backgroundColor: primaryColor }}
+                 className="w-full py-3.5 rounded-xl text-white font-bold text-sm shadow-lg hover:opacity-95 transition-opacity"
+               >
+                 {settings.post_signup_promo_button_text || 'Ir agora'}
+               </button>
+               <button 
+                 onClick={onCancel}
+                 className="w-full py-3 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-600 font-bold text-sm transition-colors"
+               >
+                 Cancelar redirecionamento
+               </button>
+             </div>
+           ) : (
+             <div className="space-y-3">
+               {settings.post_signup_promo_button_text && (
+                  <button 
+                    onClick={() => {
+                      if (settings.post_signup_promo_button_url) {
+                        window.location.href = settings.post_signup_promo_button_url;
+                      }
+                    }}
+                    style={{ backgroundColor: primaryColor }}
+                    className="w-full py-3.5 rounded-xl text-white font-bold text-sm shadow-lg hover:opacity-95 transition-opacity"
+                  >
+                    {settings.post_signup_promo_button_text}
+                  </button>
+               )}
+               {settings.post_signup_banner_closable && (
+                 <button 
+                    onClick={onCancel}
+                    className="w-full py-3 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-600 font-bold text-sm transition-colors"
+                  >
+                    Fechar
+                  </button>
+               )}
+             </div>
+           )}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+interface CountdownRedirectProps {
+  timeLeft: number | null;
+  bannerVisible: boolean;
+  primaryColor: string;
+  onCancel: () => void;
+  onRedirect: () => void;
+}
+
+export function CountdownRedirect({
+  timeLeft,
+  bannerVisible,
+  primaryColor,
+  onCancel,
+  onRedirect,
+}: CountdownRedirectProps) {
+  if (timeLeft !== null && !bannerVisible) {
+    return (
+      <div className="mt-6 pt-4 border-t border-slate-100 space-y-3">
+        <p className="text-sm font-semibold text-slate-700">Redirecionando em {timeLeft} segundos...</p>
+        <div className="flex gap-2">
+          <button onClick={onCancel} className="flex-1 py-3 rounded-xl bg-slate-100 text-slate-600 font-bold text-xs hover:bg-slate-200 transition-colors">
+            Cancelar
+          </button>
+          <button onClick={onRedirect} style={{ backgroundColor: primaryColor }} className="flex-1 py-3 rounded-xl text-white font-bold text-xs shadow-md transition-colors">
+            Ir agora
+          </button>
+        </div>
+      </div>
+    );
+  }
+
+  if (!bannerVisible) {
+    return (
+      <button
+        onClick={onRedirect}
+        style={{ backgroundColor: primaryColor }}
+        className="w-full py-4 rounded-xl text-white font-bold text-base shadow-lg hover:opacity-95 transition-all flex items-center justify-center gap-2 mt-2"
+      >
+        Navegar na Internet
+        <ExternalLink className="w-5 h-5" />
+      </button>
+    );
+  }
+
+  return null;
+}
+
+interface SecondaryActionsProps {
+  settings: StoreSettings;
+}
+
+export function SecondaryActions({ settings }: SecondaryActionsProps) {
+  return (
+    <div className="grid grid-cols-1 gap-3 pt-4">
+      {settings.post_signup_show_instagram && settings.instagram_url && (
+        <a
+          href={settings.instagram_url}
+          target="_blank"
+          rel="noopener noreferrer"
+          className="w-full p-3.5 bg-gradient-to-r from-purple-500 to-pink-500 text-white rounded-xl text-sm font-bold flex items-center justify-center gap-2 shadow-md hover:opacity-95 transition-opacity"
+        >
+          <Camera className="w-5 h-5" /> Siga nosso Instagram
+        </a>
+      )}
+
+      {settings.post_signup_show_menu && settings.menu_url && (
+        <a
+          href={settings.menu_url}
+          target="_blank"
+          rel="noopener noreferrer"
+          className="w-full p-3.5 bg-slate-900 text-white rounded-xl text-sm font-bold flex items-center justify-center gap-2 shadow-md hover:bg-slate-800 transition-colors"
+        >
+          <Utensils className="w-5 h-5 text-amber-400" /> Ver Cardápio
+        </a>
+      )}
+
+      {settings.post_signup_show_google_review && settings.google_review_url && (
+        <a
+          href={settings.google_review_url}
+          target="_blank"
+          rel="noopener noreferrer"
+          className="w-full p-3.5 bg-amber-50 border border-amber-200 text-amber-900 rounded-xl text-sm font-bold flex items-center justify-center gap-2 shadow-sm hover:bg-amber-100 transition-colors"
+        >
+          <Star className="w-5 h-5 text-amber-500" /> Avaliar no Google
+        </a>
+      )}
+    </div>
+  );
+}
+
+// ==========================================
+// Componente Principal
+// ==========================================
 
 export function SuccessOffer({ settings, visitorName, authUrl, openNdsParams }: SuccessOfferProps) {
   const [copied, setCopied] = useState(false);
@@ -60,32 +296,11 @@ export function SuccessOffer({ settings, visitorName, authUrl, openNdsParams }: 
       }
 
       if (settings.post_signup_redirect_mode !== 'NONE') {
-        let delay = 0;
-        if (settings.post_signup_redirect_mode === 'AUTO_3S') delay = 3;
-        if (settings.post_signup_redirect_mode === 'AUTO_5S') delay = 5;
-        if (settings.post_signup_redirect_mode === 'AUTO_10S') delay = 10;
-
-        if (delay > 0) {
-          setTimeLeft(delay);
-        }
+        const delay = settings.post_signup_redirect_seconds || 3;
+        setTimeLeft(delay);
       }
     }
   }, [authState, settings]);
-
-  useEffect(() => {
-    if (timeLeft === null) return;
-    
-    if (timeLeft <= 0) {
-      handleMarketingRedirect();
-      return;
-    }
-
-    const timer = setInterval(() => {
-      setTimeLeft(prev => prev !== null ? prev - 1 : null);
-    }, 1000);
-
-    return () => clearInterval(timer);
-  }, [timeLeft]);
 
   const isValidUrl = (url?: string | null): boolean => {
     if (!url) return false;
@@ -113,6 +328,21 @@ export function SuccessOffer({ settings, visitorName, authUrl, openNdsParams }: 
     }
   };
 
+  useEffect(() => {
+    if (timeLeft === null) return;
+    
+    if (timeLeft <= 0) {
+      handleMarketingRedirect();
+      return;
+    }
+
+    const timer = setInterval(() => {
+      setTimeLeft(prev => prev !== null ? prev - 1 : null);
+    }, 1000);
+
+    return () => clearInterval(timer);
+  }, [timeLeft]);
+
   const handleCopyCoupon = () => {
     if (settings.promo_coupon_code) {
       navigator.clipboard.writeText(settings.promo_coupon_code);
@@ -128,31 +358,13 @@ export function SuccessOffer({ settings, visitorName, authUrl, openNdsParams }: 
 
   const primaryColor = settings.primary_color || '#2563eb';
 
-  if (authState === 'AUTHORIZING' && isRealMode) {
+  // Renderiza tela de carregamento ou erro se no modo real
+  if (isRealMode && (authState === 'AUTHORIZING' || authState === 'FAILED')) {
     return (
-      <div className="w-full max-w-md bg-white/95 backdrop-blur-md text-slate-900 rounded-3xl shadow-2xl overflow-hidden border border-white/20 p-8 text-center space-y-4 animate-in fade-in zoom-in-95">
-        <Loader2 className="w-12 h-12 text-blue-600 animate-spin mx-auto" />
-        <h2 className="text-xl font-bold">Enviando autorização ao roteador...</h2>
-        <p className="text-sm text-slate-500">Comunicando com o gateway openNDS.</p>
-      </div>
-    );
-  }
-
-  if (authState === 'FAILED' && isRealMode) {
-    return (
-      <div className="w-full max-w-md bg-white/95 backdrop-blur-md text-slate-900 rounded-3xl shadow-2xl overflow-hidden border border-white/20 p-8 text-center space-y-4 animate-in fade-in zoom-in-95">
-        <AlertCircle className="w-12 h-12 text-rose-500 mx-auto" />
-        <h2 className="text-xl font-bold">Falha na Liberação</h2>
-        <p className="text-sm text-slate-500 mb-4">
-          Não foi possível enviar o pacote de autorização ao roteador Wi-Fi. Verifique a conexão com o gateway local.
-        </p>
-        <button
-          onClick={() => window.location.reload()}
-          className="px-6 py-3 bg-slate-900 text-white rounded-xl font-bold text-sm shadow-md"
-        >
-          Tentar Novamente
-        </button>
-      </div>
+      <AuthorizationGate 
+        authState={authState} 
+        isRealMode={isRealMode} 
+      />
     );
   }
 
@@ -238,148 +450,25 @@ export function SuccessOffer({ settings, visitorName, authUrl, openNdsParams }: 
           </div>
         )}
 
-        <div className="grid grid-cols-1 gap-3 pt-4">
-          {settings.post_signup_show_instagram && settings.instagram_url && (
-            <a
-              href={settings.instagram_url}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="w-full p-3.5 bg-gradient-to-r from-purple-500 to-pink-500 text-white rounded-xl text-sm font-bold flex items-center justify-center gap-2 shadow-md hover:opacity-95 transition-opacity"
-            >
-              <Camera className="w-5 h-5" /> Siga nosso Instagram
-            </a>
-          )}
+        <SecondaryActions settings={settings} />
 
-          {settings.post_signup_show_menu && settings.menu_url && (
-            <a
-              href={settings.menu_url}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="w-full p-3.5 bg-slate-900 text-white rounded-xl text-sm font-bold flex items-center justify-center gap-2 shadow-md hover:bg-slate-800 transition-colors"
-            >
-              <Utensils className="w-5 h-5 text-amber-400" /> Ver Cardápio
-            </a>
-          )}
-
-          {settings.post_signup_show_google_review && settings.google_review_url && (
-            <a
-              href={settings.google_review_url}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="w-full p-3.5 bg-amber-50 border border-amber-200 text-amber-900 rounded-xl text-sm font-bold flex items-center justify-center gap-2 shadow-sm hover:bg-amber-100 transition-colors"
-            >
-              <Star className="w-5 h-5 text-amber-500" /> Avaliar no Google
-            </a>
-          )}
-        </div>
-
-        {timeLeft !== null && !bannerVisible ? (
-          <div className="mt-6 pt-4 border-t border-slate-100 space-y-3">
-            <p className="text-sm font-semibold text-slate-700">Redirecionando em {timeLeft} segundos...</p>
-            <div className="flex gap-2">
-              <button onClick={cancelRedirect} className="flex-1 py-3 rounded-xl bg-slate-100 text-slate-600 font-bold text-xs hover:bg-slate-200 transition-colors">
-                Cancelar
-              </button>
-              <button onClick={handleMarketingRedirect} style={{ backgroundColor: primaryColor }} className="flex-1 py-3 rounded-xl text-white font-bold text-xs shadow-md transition-colors">
-                Ir agora
-              </button>
-            </div>
-          </div>
-        ) : (
-          !bannerVisible && (
-            <button
-              onClick={handleMarketingRedirect}
-              style={{ backgroundColor: primaryColor }}
-              className="w-full py-4 rounded-xl text-white font-bold text-base shadow-lg hover:opacity-95 transition-all flex items-center justify-center gap-2 mt-2"
-            >
-              Navegar na Internet
-              <ExternalLink className="w-5 h-5" />
-            </button>
-          )
-        )}
+        <CountdownRedirect
+          timeLeft={timeLeft}
+          bannerVisible={bannerVisible}
+          primaryColor={primaryColor}
+          onCancel={cancelRedirect}
+          onRedirect={handleMarketingRedirect}
+        />
       </div>
 
-      {bannerVisible && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 sm:p-6 bg-black/60 backdrop-blur-sm animate-in fade-in">
-          <div className="w-full max-w-md bg-white rounded-3xl shadow-2xl overflow-hidden relative flex flex-col animate-in zoom-in-95">
-            {settings.post_signup_banner_closable && (
-              <button 
-                onClick={cancelRedirect}
-                className="absolute top-3 right-3 z-10 w-8 h-8 bg-black/50 hover:bg-black/70 text-white rounded-full flex items-center justify-center backdrop-blur-md transition-colors"
-              >
-                <X className="w-5 h-5" />
-              </button>
-            )}
-
-            {settings.post_signup_promo_image_url ? (
-               <div 
-                  className="w-full bg-slate-100 relative" 
-                  style={{
-                    aspectRatio: settings.post_signup_promo_image_aspect_ratio === '9:16' ? '9/16' 
-                      : settings.post_signup_promo_image_aspect_ratio === '1:1' ? '1/1'
-                      : settings.post_signup_promo_image_aspect_ratio === '16:9' ? '16/9'
-                      : '4/5',
-                    maxHeight: '60vh'
-                  }}
-                >
-                  <img src={settings.post_signup_promo_image_url} alt="Banner" className="w-full h-full object-cover" />
-                </div>
-            ) : (
-               <div className="w-full h-40 bg-gradient-to-br from-blue-500 to-purple-600 flex items-center justify-center text-white p-6">
-                 <Star className="w-12 h-12 opacity-50" />
-               </div>
-            )}
-
-            <div className="p-6 bg-white flex-1 overflow-y-auto">
-               {settings.post_signup_promo_title && <h2 className="text-xl font-black text-slate-900 mb-2">{settings.post_signup_promo_title}</h2>}
-               {settings.post_signup_promo_description && <p className="text-sm text-slate-600 mb-6">{settings.post_signup_promo_description}</p>}
-               
-               {timeLeft !== null ? (
-                 <div className="space-y-3">
-                   <p className="text-xs font-bold text-center text-slate-500 mb-2">Redirecionando em {timeLeft} segundos...</p>
-                   <button 
-                     onClick={handleMarketingRedirect}
-                     style={{ backgroundColor: primaryColor }}
-                     className="w-full py-3.5 rounded-xl text-white font-bold text-sm shadow-lg hover:opacity-95 transition-opacity"
-                   >
-                     {settings.post_signup_promo_button_text || 'Ir agora'}
-                   </button>
-                   <button 
-                     onClick={cancelRedirect}
-                     className="w-full py-3 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-600 font-bold text-sm transition-colors"
-                   >
-                     Cancelar redirecionamento
-                   </button>
-                 </div>
-               ) : (
-                 <div className="space-y-3">
-                   {settings.post_signup_promo_button_text && (
-                      <button 
-                        onClick={() => {
-                          if (settings.post_signup_promo_button_url) {
-                            window.location.href = settings.post_signup_promo_button_url;
-                          }
-                        }}
-                        style={{ backgroundColor: primaryColor }}
-                        className="w-full py-3.5 rounded-xl text-white font-bold text-sm shadow-lg hover:opacity-95 transition-opacity"
-                      >
-                        {settings.post_signup_promo_button_text}
-                      </button>
-                   )}
-                   {settings.post_signup_banner_closable && (
-                     <button 
-                        onClick={cancelRedirect}
-                        className="w-full py-3 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-600 font-bold text-sm transition-colors"
-                      >
-                        Fechar
-                      </button>
-                   )}
-                 </div>
-               )}
-            </div>
-          </div>
-        </div>
-      )}
+      <PromoBanner
+        visible={bannerVisible}
+        settings={settings}
+        timeLeft={timeLeft}
+        primaryColor={primaryColor}
+        onCancel={cancelRedirect}
+        onRedirect={handleMarketingRedirect}
+      />
     </>
   );
 }
