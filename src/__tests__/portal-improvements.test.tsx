@@ -6,6 +6,7 @@ import { GET as getPortalCampaigns } from '../app/api/portal/campaigns/route';
 import { POST as registerVisitor } from '../app/api/portal/register/route';
 import { POST as saveAdminSettings } from '../app/api/admin/settings/route';
 import { POST as saveCampaign, PUT as updateCampaign } from '../app/api/admin/campaigns/route';
+import { getAspectRatioValue } from '../lib/aspect-ratio';
 
 // Mock dynamic cookies and server clients
 let mockCookieValue: string | undefined = undefined;
@@ -383,5 +384,179 @@ describe('Ajustes do Portal - Testes de Melhorias', () => {
         email: 'correto@email.com',
       })
     );
+  });
+
+  it('10. Setas de navegacão aparecem com 2 ou mais itens e não aparecem com 1 item', () => {
+    const singleSlide = [{ id: '1', mediaUrl: 'https://img1.com', mediaType: 'IMAGE' as const }];
+    const { rerender } = render(<MediaCarousel slides={singleSlide} />);
+    expect(screen.queryByLabelText('Banner anterior')).toBeNull();
+
+    const multipleSlides = [
+      { id: '1', mediaUrl: 'https://img1.com', mediaType: 'IMAGE' as const },
+      { id: '2', mediaUrl: 'https://img2.com', mediaType: 'IMAGE' as const }
+    ];
+    rerender(<MediaCarousel slides={multipleSlides} />);
+    expect(screen.getByLabelText('Banner anterior')).toBeDefined();
+    expect(screen.getByLabelText('Próximo banner')).toBeDefined();
+  });
+
+  it('11. Botões de anterior e próximo funcionam', () => {
+    const slides = [
+      { id: '1', mediaUrl: 'https://img1.com', mediaType: 'IMAGE' as const },
+      { id: '2', mediaUrl: 'https://img2.com', mediaType: 'IMAGE' as const }
+    ];
+    const onSlideView = vi.fn();
+    render(<MediaCarousel slides={slides} onSlideView={onSlideView} />);
+    
+    // First slide is index 0
+    expect(onSlideView).toHaveBeenLastCalledWith(expect.objectContaining({ id: '1' }));
+
+    const nextBtn = screen.getByLabelText('Próximo banner');
+    fireEvent.click(nextBtn);
+    expect(onSlideView).toHaveBeenLastCalledWith(expect.objectContaining({ id: '2' }));
+
+    const prevBtn = screen.getByLabelText('Banner anterior');
+    fireEvent.click(prevBtn);
+    expect(onSlideView).toHaveBeenLastCalledWith(expect.objectContaining({ id: '1' }));
+  });
+
+  it('12. Troca automática ocorre após 3 segundos e volta ao início após o último', () => {
+    const slides = [
+      { id: '1', mediaUrl: 'https://img1.com', mediaType: 'IMAGE' as const },
+      { id: '2', mediaUrl: 'https://img2.com', mediaType: 'IMAGE' as const }
+    ];
+    const onSlideView = vi.fn();
+    render(<MediaCarousel slides={slides} onSlideView={onSlideView} />);
+
+    expect(onSlideView).toHaveBeenLastCalledWith(expect.objectContaining({ id: '1' }));
+
+    act(() => {
+      vi.advanceTimersByTime(3000);
+    });
+    expect(onSlideView).toHaveBeenLastCalledWith(expect.objectContaining({ id: '2' }));
+
+    act(() => {
+      vi.advanceTimersByTime(3000);
+    });
+    expect(onSlideView).toHaveBeenLastCalledWith(expect.objectContaining({ id: '1' }));
+  });
+
+  it('13. Interação pausa o autoplay e retorna após 5 segundos', () => {
+    const slides = [
+      { id: '1', mediaUrl: 'https://img1.com', mediaType: 'IMAGE' as const },
+      { id: '2', mediaUrl: 'https://img2.com', mediaType: 'IMAGE' as const }
+    ];
+    const onSlideView = vi.fn();
+    render(<MediaCarousel slides={slides} onSlideView={onSlideView} />);
+
+    expect(onSlideView).toHaveBeenLastCalledWith(expect.objectContaining({ id: '1' }));
+
+    // Simula hover (enter)
+    const container = screen.getByLabelText('Banner anterior').closest('div');
+    fireEvent.mouseEnter(container!);
+
+    act(() => {
+      vi.advanceTimersByTime(3000);
+    });
+    // Não deve ter mudado pois está pausado
+    expect(onSlideView).toHaveBeenLastCalledWith(expect.objectContaining({ id: '1' }));
+
+    // Simula mouse leave
+    fireEvent.mouseLeave(container!);
+
+    // Autoplay deve resumir após 5 segundos
+    act(() => {
+      vi.advanceTimersByTime(5000);
+    });
+    
+    // Agora avança 3 segundos
+    act(() => {
+      vi.advanceTimersByTime(3000);
+    });
+    expect(onSlideView).toHaveBeenLastCalledWith(expect.objectContaining({ id: '2' }));
+  });
+
+  it('14. Swipe funciona no celular', () => {
+    const slides = [
+      { id: '1', mediaUrl: 'https://img1.com', mediaType: 'IMAGE' as const },
+      { id: '2', mediaUrl: 'https://img2.com', mediaType: 'IMAGE' as const }
+    ];
+    const onSlideView = vi.fn();
+    render(<MediaCarousel slides={slides} onSlideView={onSlideView} />);
+
+    const container = screen.getByLabelText('Banner anterior').closest('div');
+    
+    // Swipe left (advance)
+    fireEvent.touchStart(container!, { touches: [{ clientX: 300 }] as any });
+    fireEvent.touchEnd(container!, { changedTouches: [{ clientX: 100 }] as any });
+
+    expect(onSlideView).toHaveBeenLastCalledWith(expect.objectContaining({ id: '2' }));
+
+    // Swipe right (go back)
+    fireEvent.touchStart(container!, { touches: [{ clientX: 100 }] as any });
+    fireEvent.touchEnd(container!, { changedTouches: [{ clientX: 300 }] as any });
+
+    expect(onSlideView).toHaveBeenLastCalledWith(expect.objectContaining({ id: '1' }));
+  });
+
+  it('15. Cada slide mantem seu aspect ratio e aspect-ratio helper funciona', () => {
+    expect(getAspectRatioValue('1:1')).toBe('1 / 1');
+    expect(getAspectRatioValue('4:5')).toBe('4 / 5');
+    expect(getAspectRatioValue('9:16')).toBe('9 / 16');
+    expect(getAspectRatioValue('16:9')).toBe('16 / 9');
+    expect(getAspectRatioValue(null)).toBe('16 / 9');
+  });
+
+  it('16. Campanhas filtradas por stage no portal', async () => {
+    mockCampaignsDb = [
+      {
+        id: 'camp-pre',
+        title: 'Campanha Pre',
+        status: 'ACTIVE',
+        show_pre_signup: true,
+        show_post_signup: false,
+        show_promotions_page: false,
+      },
+      {
+        id: 'camp-post',
+        title: 'Campanha Post',
+        status: 'ACTIVE',
+        show_pre_signup: false,
+        show_post_signup: true,
+        show_promotions_page: false,
+      },
+      {
+        id: 'camp-promos',
+        title: 'Campanha Promos',
+        status: 'ACTIVE',
+        show_pre_signup: false,
+        show_post_signup: false,
+        show_promotions_page: true,
+      }
+    ];
+
+    // GET pre_signup
+    const reqPre = new Request('http://localhost/api/portal/campaigns?stage=pre_signup');
+    const resPre = await getPortalCampaigns(reqPre);
+    const dataPre = await resPre.json();
+    const idsPre = dataPre.campaigns.map((c: any) => c.id);
+    expect(idsPre).toContain('camp-pre');
+    expect(idsPre).not.toContain('camp-post');
+
+    // GET post_signup
+    const reqPost = new Request('http://localhost/api/portal/campaigns?stage=post_signup');
+    const resPost = await getPortalCampaigns(reqPost);
+    const dataPost = await resPost.json();
+    const idsPost = dataPost.campaigns.map((c: any) => c.id);
+    expect(idsPost).toContain('camp-post');
+    expect(idsPost).not.toContain('camp-pre');
+
+    // GET promotions_page
+    const reqPromos = new Request('http://localhost/api/portal/campaigns?stage=promotions_page');
+    const resPromos = await getPortalCampaigns(reqPromos);
+    const dataPromos = await resPromos.json();
+    const idsPromos = dataPromos.campaigns.map((c: any) => c.id);
+    expect(idsPromos).toContain('camp-promos');
+    expect(idsPromos).not.toContain('camp-pre');
   });
 });

@@ -43,6 +43,32 @@ export function PreSignupSettings({ settings, setSettings }: SettingsTabProps) {
         </label>
       </div>
 
+      {/* SEÇÃO: PROMOÇÕES E OFERTAS */}
+      <div className="bg-white rounded-2xl border border-slate-200/80 p-6 shadow-xs space-y-4">
+        <h2 className="text-base font-bold text-slate-900 flex items-center gap-2 border-b border-slate-100 pb-3">
+          <Settings className="w-5 h-5 text-blue-600" />
+          Promoções e ofertas
+        </h2>
+        <div className="space-y-3">
+          <label className="flex items-center gap-2.5 cursor-pointer text-sm font-medium text-slate-700">
+            <input type="checkbox" checked={settings.pre_signup_promotions_enabled ?? true} onChange={(e) => setSettings({ ...settings, pre_signup_promotions_enabled: e.target.checked })} className="w-4 h-4 rounded border-slate-300 text-blue-600 focus:ring-blue-500/30" />
+            Mostrar promoções antes do cadastro
+          </label>
+          <label className="flex items-center gap-2.5 cursor-pointer text-sm font-medium text-slate-700">
+            <input type="checkbox" checked={settings.post_signup_promotions_enabled ?? true} onChange={(e) => setSettings({ ...settings, post_signup_promotions_enabled: e.target.checked })} className="w-4 h-4 rounded border-slate-300 text-blue-600 focus:ring-blue-500/30" />
+            Mostrar promoções depois do cadastro
+          </label>
+          <label className="flex items-center gap-2.5 cursor-pointer text-sm font-medium text-slate-700">
+            <input type="checkbox" checked={settings.promotions_button_enabled ?? true} onChange={(e) => setSettings({ ...settings, promotions_button_enabled: e.target.checked })} className="w-4 h-4 rounded border-slate-300 text-blue-600 focus:ring-blue-500/30" />
+            Mostrar botão "Ver promoções"
+          </label>
+          <label className="flex items-center gap-2.5 cursor-pointer text-sm font-medium text-slate-700">
+            <input type="checkbox" checked={settings.promotions_carousel_enabled ?? true} onChange={(e) => setSettings({ ...settings, promotions_carousel_enabled: e.target.checked })} className="w-4 h-4 rounded border-slate-300 text-blue-600 focus:ring-blue-500/30" />
+            Mostrar carrossel de banners
+          </label>
+        </div>
+      </div>
+
       {settings.pre_signup_enabled && (
         <>
           {/* DADOS DA MARCA E CORES GERAIS */}
@@ -136,7 +162,7 @@ export function PreSignupSettings({ settings, setSettings }: SettingsTabProps) {
                     />
                   </div>
                   {settings.landing_media_url && settings.landing_media_type === 'IMAGE' && (
-                    <div className="md:col-span-2 p-4 bg-slate-50 rounded-2xl border border-slate-200/60 grid grid-cols-1 md:grid-cols-3 gap-4 mt-2 text-slate-900">
+                    <div className="md:col-span-2 p-4 bg-slate-50 rounded-2xl border border-slate-200/60 grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4 mt-2 text-slate-900">
                       <div>
                         <label className="block text-xs font-semibold uppercase text-slate-600 mb-1">Enquadramento</label>
                         <select value={settings.landing_media_fit || 'cover'} onChange={(e) => setSettings({ ...settings, landing_media_fit: e.target.value as any })} className="w-full px-4 py-2.5 rounded-xl border border-slate-200 text-sm font-semibold">
@@ -145,11 +171,20 @@ export function PreSignupSettings({ settings, setSettings }: SettingsTabProps) {
                         </select>
                       </div>
                       <div>
-                        <label className="block text-xs font-semibold uppercase text-slate-600 mb-1">Posição Horizontal: {settings.landing_media_position_x ?? 50}%</label>
+                        <label className="block text-xs font-semibold uppercase text-slate-600 mb-1">Proporção</label>
+                        <select value={settings.landing_media_aspect_ratio || '16:9'} onChange={(e) => setSettings({ ...settings, landing_media_aspect_ratio: e.target.value as any })} className="w-full px-4 py-2.5 rounded-xl border border-slate-200 text-sm font-semibold">
+                          <option value="16:9">16:9 (Horizontal)</option>
+                          <option value="4:5">4:5 (Retrato)</option>
+                          <option value="1:1">1:1 (Quadrada)</option>
+                          <option value="9:16">9:16 (Story)</option>
+                        </select>
+                      </div>
+                      <div>
+                        <label className="block text-xs font-semibold uppercase text-slate-600 mb-1">Posição H: {settings.landing_media_position_x ?? 50}%</label>
                         <input type="range" min="0" max="100" value={settings.landing_media_position_x ?? 50} onChange={(e) => setSettings({ ...settings, landing_media_position_x: parseInt(e.target.value) })} className="w-full h-2 bg-slate-200 rounded-lg appearance-none cursor-pointer mt-3" />
                       </div>
                       <div>
-                        <label className="block text-xs font-semibold uppercase text-slate-600 mb-1">Posição Vertical: {settings.landing_media_position_y ?? 50}%</label>
+                        <label className="block text-xs font-semibold uppercase text-slate-600 mb-1">Posição V: {settings.landing_media_position_y ?? 50}%</label>
                         <input type="range" min="0" max="100" value={settings.landing_media_position_y ?? 50} onChange={(e) => setSettings({ ...settings, landing_media_position_y: parseInt(e.target.value) })} className="w-full h-2 bg-slate-200 rounded-lg appearance-none cursor-pointer mt-3" />
                       </div>
                     </div>

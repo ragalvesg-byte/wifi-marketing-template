@@ -35,6 +35,11 @@ export function CampaignsManager() {
   const [mediaPositionY, setMediaPositionY] = useState(50);
   const [mediaFit, setMediaFit] = useState<'cover' | 'contain'>('cover');
 
+  // Stage Targets State
+  const [showPreSignup, setShowPreSignup] = useState(true);
+  const [showPostSignup, setShowPostSignup] = useState(true);
+  const [showPromotionsPage, setShowPromotionsPage] = useState(true);
+
   // Target State
   const [targetType, setTargetType] = useState<'ALL' | 'NEW_VISITORS' | 'RETURNING_VISITORS' | 'GENDER' | 'BIRTHDAY_MONTH'>('ALL');
   const [birthdayMonthRule, setBirthdayMonthRule] = useState('8');
@@ -64,6 +69,9 @@ export function CampaignsManager() {
     setMediaPositionX(campaign.media_position_x ?? 50);
     setMediaPositionY(campaign.media_position_y ?? 50);
     setMediaFit(campaign.media_fit || 'cover');
+    setShowPreSignup(campaign.show_pre_signup ?? true);
+    setShowPostSignup(campaign.show_post_signup ?? true);
+    setShowPromotionsPage(campaign.show_promotions_page ?? true);
 
     const audience = campaign.campaign_audiences?.[0];
     if (audience) {
@@ -96,6 +104,9 @@ export function CampaignsManager() {
         media_position_x: campaign.media_position_x ?? 50,
         media_position_y: campaign.media_position_y ?? 50,
         media_fit: campaign.media_fit || 'cover',
+        show_pre_signup: campaign.show_pre_signup ?? true,
+        show_post_signup: campaign.show_post_signup ?? true,
+        show_promotions_page: campaign.show_promotions_page ?? true,
         button_text: campaign.button_text,
         button_url: campaign.button_url,
         start_date: campaign.start_date,
@@ -136,6 +147,12 @@ export function CampaignsManager() {
         media_url: campaign.media_url,
         media_type: campaign.media_type,
         aspect_ratio: campaign.aspect_ratio,
+        media_position_x: campaign.media_position_x ?? 50,
+        media_position_y: campaign.media_position_y ?? 50,
+        media_fit: campaign.media_fit || 'cover',
+        show_pre_signup: campaign.show_pre_signup ?? true,
+        show_post_signup: campaign.show_post_signup ?? true,
+        show_promotions_page: campaign.show_promotions_page ?? true,
         button_text: campaign.button_text,
         button_url: campaign.button_url,
         start_date: campaign.start_date,
@@ -225,6 +242,9 @@ export function CampaignsManager() {
     setMediaPositionX(50);
     setMediaPositionY(50);
     setMediaFit('cover');
+    setShowPreSignup(true);
+    setShowPostSignup(true);
+    setShowPromotionsPage(true);
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -268,6 +288,9 @@ export function CampaignsManager() {
       media_position_x: mediaPositionX,
       media_position_y: mediaPositionY,
       media_fit: mediaFit,
+      show_pre_signup: showPreSignup,
+      show_post_signup: showPostSignup,
+      show_promotions_page: showPromotionsPage,
       button_text: buttonText || null,
       button_url: buttonUrl || null,
       start_date: startDate || null,
@@ -701,7 +724,26 @@ export function CampaignsManager() {
             )}
           </div>
 
-          {/* Seção de cupom removida — sistema de oferta simples */}
+          {/* Seção de Onde Exibir a Campanha */}
+          <div className="border-b border-slate-100 pb-4 pt-2">
+            <h2 className="text-lg font-bold text-slate-900">Onde esta campanha deve aparecer?</h2>
+            <p className="text-xs text-slate-500">Escolha em quais etapas da jornada do visitante esta campanha será exibida.</p>
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4 bg-slate-50 p-4 rounded-xl border border-slate-200/60">
+            <label className="flex items-center gap-2 cursor-pointer text-sm font-semibold text-slate-700">
+              <input type="checkbox" checked={showPreSignup} onChange={(e) => setShowPreSignup(e.target.checked)} className="w-4 h-4 rounded border-slate-300 text-blue-600 focus:ring-blue-500/30" />
+              Antes do cadastro
+            </label>
+            <label className="flex items-center gap-2 cursor-pointer text-sm font-semibold text-slate-700">
+              <input type="checkbox" checked={showPostSignup} onChange={(e) => setShowPostSignup(e.target.checked)} className="w-4 h-4 rounded border-slate-300 text-blue-600 focus:ring-blue-500/30" />
+              Depois do cadastro
+            </label>
+            <label className="flex items-center gap-2 cursor-pointer text-sm font-semibold text-slate-700">
+              <input type="checkbox" checked={showPromotionsPage} onChange={(e) => setShowPromotionsPage(e.target.checked)} className="w-4 h-4 rounded border-slate-300 text-blue-600 focus:ring-blue-500/30" />
+              Página de promoções
+            </label>
+          </div>
 
           <div className="border-b border-slate-100 pb-4 pt-2">
             <h2 className="text-lg font-bold text-slate-900">4. Agendamento e Publicação</h2>

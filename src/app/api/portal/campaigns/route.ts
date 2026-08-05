@@ -7,6 +7,7 @@ export async function GET(request: Request) {
     const { searchParams } = new URL(request.url);
     const visitorId = searchParams.get('visitorId');
     const isDemo = searchParams.get('isDemo') === 'true';
+    const stage = searchParams.get('stage') || 'pre_signup';
 
     // 1. Instanciar cliente do Supabase
     let supabase;
@@ -32,6 +33,9 @@ export async function GET(request: Request) {
           aspect_ratio: '4:5',
           button_text: null,
           button_url: null,
+          show_pre_signup: true,
+          show_post_signup: true,
+          show_promotions_page: true,
         },
         {
           id: 'campaign-2',
@@ -44,6 +48,9 @@ export async function GET(request: Request) {
           aspect_ratio: '1:1',
           button_text: 'Ver no Cardápio',
           button_url: 'https://exemplo.com/cardapio',
+          show_pre_signup: false,
+          show_post_signup: true,
+          show_promotions_page: true,
         },
         {
           id: 'campaign-3',
@@ -56,6 +63,9 @@ export async function GET(request: Request) {
           aspect_ratio: '16:9',
           button_text: 'Ver Site',
           button_url: 'https://exemplo.com',
+          show_pre_signup: true,
+          show_post_signup: true,
+          show_promotions_page: true,
         }
       ];
 
@@ -68,6 +78,14 @@ export async function GET(request: Request) {
       } else if (visitorId === 'visitor-bday') {
         matched = [mockActiveCampaigns[1], mockActiveCampaigns[2]]; // aniversário + geral
       }
+
+      // Filtro de stage na demonstração
+      matched = matched.filter((c: any) => {
+        if (stage === 'pre_signup') return c.show_pre_signup !== false;
+        if (stage === 'post_signup') return c.show_post_signup !== false;
+        if (stage === 'promotions_page') return c.show_promotions_page !== false;
+        return true;
+      });
 
       return NextResponse.json({ campaigns: matched, isDemo: true });
     }
@@ -108,6 +126,11 @@ export async function GET(request: Request) {
 
     // 5. Aplicar regras de segmentação (matching logic) — sem filtro de cupons resgatados
     const matchedCampaigns = activeCampaigns.filter((campaign: any) => {
+      // Filtro de stage/etapa da jornada
+      if (stage === 'pre_signup' && campaign.show_pre_signup === false) return false;
+      if (stage === 'post_signup' && campaign.show_post_signup === false) return false;
+      if (stage === 'promotions_page' && campaign.show_promotions_page === false) return false;
+
       // Validação do período de início e término da campanha
       const now = new Date();
       if (campaign.start_date && new Date(campaign.start_date) > now) {

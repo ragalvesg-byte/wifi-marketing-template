@@ -40,3 +40,9 @@ yarn-error.log*
 # typescript
 *.tsbuildinfo
 next-env.d.ts
+
+# database backups and dumps
+*_data.sql
+*dump*.sql
+*backup*.sql
+04_migrated_data.sql

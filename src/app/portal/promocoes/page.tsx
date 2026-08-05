@@ -4,6 +4,7 @@ import React, { useState, useEffect, useRef, Suspense } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { StoreSettings } from '@/types/database';
 import { Gift, ArrowLeft, Loader2, Star, Calendar, ExternalLink } from 'lucide-react';
+import { getAspectRatioValue } from '@/lib/aspect-ratio';
 
 function PromocoesContent() {
   const router = useRouter();
@@ -28,7 +29,7 @@ function PromocoesContent() {
 
         // 2. Fetch campaigns
         const campaignsRes = await fetch(
-          `/api/portal/campaigns?visitorId=${visitorId || ''}&isDemo=${isDemo}`
+          `/api/portal/campaigns?visitorId=${visitorId || ''}&stage=promotions_page&isDemo=${isDemo}`
         );
         if (campaignsRes.ok) {
           const campaignsData = await campaignsRes.json();
@@ -171,10 +172,7 @@ function PromocoesContent() {
                     <div 
                       className="w-full relative overflow-hidden"
                       style={{
-                        aspectRatio: camp.aspect_ratio === '9:16' ? '9/16' 
-                          : camp.aspect_ratio === '1:1' ? '1/1'
-                          : camp.aspect_ratio === '16:9' ? '16/9'
-                          : '4/5',
+                        aspectRatio: getAspectRatioValue(camp.aspect_ratio),
                         maxHeight: '35vh'
                       }}
                     >

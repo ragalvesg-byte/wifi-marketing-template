@@ -3,6 +3,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { ChevronLeft, ChevronRight } from 'lucide-react';
 import { Campaign } from '@/types/database';
+import { getAspectRatioValue } from '@/lib/aspect-ratio';
 
 export interface CarouselSlide {
   id: string; // 'main' or campaign ID
@@ -17,6 +18,7 @@ export interface CarouselSlide {
   mediaFit?: 'cover' | 'contain';
   isCampaign?: boolean;
   campaign?: any; // original campaign object
+  aspectRatio?: string;
 }
 
 interface MediaCarouselProps {
@@ -59,6 +61,27 @@ export function MediaCarousel({
       };
     }
   }, []);
+
+  // Keyboard navigation on desktop
+  useEffect(() => {
+    if (!isMounted || slides.length <= 1) return;
+
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (document.activeElement?.tagName === 'INPUT' || document.activeElement?.tagName === 'TEXTAREA') {
+        return;
+      }
+      if (e.key === 'ArrowLeft') {
+        handleInteraction();
+        setCurrentIndex((prev) => (prev === 0 ? slides.length - 1 : prev - 1));
+      } else if (e.key === 'ArrowRight') {
+        handleInteraction();
+        setCurrentIndex((prev) => (prev + 1) % slides.length);
+      }
+    };
+
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [isMounted, slides.length]);
 
   // Trigger view log for the active campaign
   useEffect(() => {
@@ -176,10 +199,14 @@ export function MediaCarousel({
 
   // Render static first banner if not hydrated yet
   if (!isMounted) {
+    const firstSlideRatio = firstSlide.aspectRatio || containerAspectRatio || '16/9';
     return (
       <div 
         className="w-full relative rounded-2xl overflow-hidden border border-white/10 shadow-xl"
-        style={{ aspectRatio: containerAspectRatio }}
+        style={{
+          aspectRatio: getAspectRatioValue(firstSlideRatio),
+          maxHeight: '40vh',
+        }}
       >
         {firstSlide.mediaType === 'IMAGE' ? (
           <img
@@ -197,14 +224,20 @@ export function MediaCarousel({
     );
   }
 
+  const activeSlide = slides[currentIndex];
+  const activeSlideRatio = activeSlide?.aspectRatio || containerAspectRatio || '16/9';
+
   return (
     <div
-      className="w-full relative group rounded-2xl overflow-hidden border border-white/10 shadow-xl"
-      style={{ aspectRatio: containerAspectRatio }}
+      className="w-full relative group rounded-2xl overflow-hidden border border-white/10 shadow-xl transition-all duration-500 ease-in-out"
+      style={{
+        aspectRatio: getAspectRatioValue(activeSlideRatio),
+        maxHeight: '40vh',
+      }}
       onTouchStart={handleTouchStart}
       onTouchEnd={handleTouchEnd}
       onMouseEnter={handleInteraction}
-      onMouseLeave={() => setIsInteracting(false)}
+      onMouseLeave={handleInteraction}
     >
       {/* Slides Container */}
       <div className="w-full h-full relative">
@@ -251,15 +284,17 @@ export function MediaCarousel({
         <>
           <button
             onClick={handlePrev}
-            className="absolute left-2 top-1/2 -translate-y-1/2 w-8 h-8 rounded-full bg-black/40 hover:bg-black/60 text-white flex items-center justify-center backdrop-blur-md opacity-0 group-hover:opacity-100 transition-opacity duration-200 z-30"
+            className="absolute left-3 top-1/2 -translate-y-1/2 w-10 h-10 rounded-full bg-black/60 hover:bg-black/85 text-white flex items-center justify-center backdrop-blur-md transition-all duration-200 z-30 border border-white/20 active:scale-95 shadow-md"
+            aria-label="Banner anterior"
           >
-            <ChevronLeft className="w-4 h-4" />
+            <ChevronLeft className="w-5 h-5" />
           </button>
           <button
             onClick={handleNext}
-            className="absolute right-2 top-1/2 -translate-y-1/2 w-8 h-8 rounded-full bg-black/40 hover:bg-black/60 text-white flex items-center justify-center backdrop-blur-md opacity-0 group-hover:opacity-100 transition-opacity duration-200 z-30"
+            className="absolute right-3 top-1/2 -translate-y-1/2 w-10 h-10 rounded-full bg-black/60 hover:bg-black/85 text-white flex items-center justify-center backdrop-blur-md transition-all duration-200 z-30 border border-white/20 active:scale-95 shadow-md"
+            aria-label="Próximo banner"
           >
-            <ChevronRight className="w-4 h-4" />
+            <ChevronRight className="w-5 h-5" />
           </button>
         </>
       )}
