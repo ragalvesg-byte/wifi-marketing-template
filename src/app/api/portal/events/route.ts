@@ -1,4 +1,5 @@
 import { NextResponse } from 'next/server';
+import { cookies } from 'next/headers';
 import { createAdminClient } from '@/lib/supabase/admin';
 import { VisitorEventType } from '@/types/database';
 
@@ -72,10 +73,23 @@ export async function POST(request: Request) {
       console.warn('Erro ao criar cliente Supabase Admin para eventos (modo demonstração):', e);
     }
 
+    let resolvedVisitorId = visitor_id;
+    if (!resolvedVisitorId && supabase) {
+      try {
+        const cookieStore = await cookies();
+        const deviceCookieToken = cookieStore.get('wifi_visitor_device_token')?.value;
+        if (deviceCookieToken) {
+          resolvedVisitorId = deviceCookieToken;
+        }
+      } catch (err) {
+        // Ignorado no escopo de testes
+      }
+    }
+
     if (supabase) {
       const { error } = await supabase.from('visitor_events').insert({
         event_type,
-        visitor_id: visitor_id || null,
+        visitor_id: resolvedVisitorId || null,
         wifi_session_id: wifi_session_id || null,
         campaign_id: campaign_id || null,
         anonymous_session_id: anonymous_session_id || null,

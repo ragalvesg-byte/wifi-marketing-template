@@ -11,7 +11,7 @@ const rateLimitMap = new Map<string, { count: number; resetAt: number }>();
 export async function POST(request: Request) {
   try {
     const body: RegisterVisitorPayload = await request.json();
-    const cleanPhone = cleanPhoneNumber(body.phone || '');
+    let cleanPhone = cleanPhoneNumber(body.phone || '');
     const ip = request.headers.get('x-forwarded-for') || '127.0.0.1';
 
     let supabase;
@@ -87,13 +87,62 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: 'Muitas requisições. Tente novamente mais tarde.' }, { status: 429 });
     }
 
-    if (!cleanPhone || cleanPhone.length < 10) {
+    // Fallback: se o telefone ou nome não for enviado (Quick Connect de visitante recorrente)
+    let finalPhone = cleanPhone;
+    let finalName = body.name || '';
+
+    if ((!finalPhone || finalPhone.length < 10 || !finalName || finalName.trim().length < 2) && supabase) {
+      try {
+        const cookieStore = await cookies();
+        const deviceCookieToken = cookieStore.get('wifi_visitor_device_token')?.value;
+        const rawMac = body.mac_address;
+        const validMac = isValidMac(rawMac) ? rawMac!.toLowerCase() : null;
+
+        let foundVisitor = null;
+
+        if (deviceCookieToken) {
+          const { data: vByCookie } = await supabase
+            .from('visitors')
+            .select('phone, name')
+            .eq('id', deviceCookieToken)
+            .maybeSingle();
+          if (vByCookie) foundVisitor = vByCookie;
+        }
+
+        if (!foundVisitor && validMac) {
+          const { data: dev } = await supabase
+            .from('devices')
+            .select('visitors(phone, name)')
+            .eq('mac_address', validMac)
+            .maybeSingle();
+          if (dev && dev.visitors) {
+            foundVisitor = Array.isArray(dev.visitors) ? dev.visitors[0] : dev.visitors;
+          }
+        }
+
+        if (foundVisitor) {
+          finalPhone = cleanPhoneNumber(foundVisitor.phone || '');
+          finalName = foundVisitor.name || '';
+          body.phone = foundVisitor.phone;
+          body.name = foundVisitor.name;
+        }
+      } catch (err) {
+        console.warn('Erro ao buscar fallback do visitante no register:', err);
+      }
+    }
+
+    if (!finalPhone || finalPhone.length < 10) {
       return NextResponse.json({ error: 'Número de WhatsApp inválido' }, { status: 400 });
     }
 
-    if (!body.name || body.name.trim().length < 2) {
+    if (!finalName || finalName.trim().length < 2) {
       return NextResponse.json({ error: 'Nome completo é obrigatório' }, { status: 400 });
     }
+
+    cleanPhone = finalPhone;
+    body.name = finalName;
+
+
 
     const rawMac = body.mac_address;
     const validMac = isValidMac(rawMac) ? rawMac!.toLowerCase() : null;
