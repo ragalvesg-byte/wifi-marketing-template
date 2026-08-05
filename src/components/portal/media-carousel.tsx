@@ -13,12 +13,15 @@ export interface CarouselSlide {
   description?: string;
   buttonText?: string;
   buttonUrl?: string;
-  mediaPositionX?: number;
-  mediaPositionY?: number;
-  mediaFit?: 'cover' | 'contain';
+  positionX?: number;
+  positionY?: number;
+  fit?: 'cover' | 'contain';
   isCampaign?: boolean;
   campaign?: any; // original campaign object
   aspectRatio?: string;
+  mediaPositionX?: number;
+  mediaPositionY?: number;
+  mediaFit?: 'cover' | 'contain';
 }
 
 interface MediaCarouselProps {
@@ -187,12 +190,14 @@ export function MediaCarousel({
 
   // Safe styling mapping
   const getSlideStyle = (slide: CarouselSlide) => {
-    const posX = slide.mediaPositionX ?? 50;
-    const posY = slide.mediaPositionY ?? 50;
-    const fit = slide.mediaFit || 'cover';
+    const posX = slide.positionX ?? slide.mediaPositionX ?? 50;
+    const posY = slide.positionY ?? slide.mediaPositionY ?? 50;
+    const fit = slide.fit ?? slide.mediaFit ?? 'contain';
     return {
-      objectPosition: `${posX}% ${posY}%`,
+      width: '100%',
+      height: '100%',
       objectFit: fit as any,
+      objectPosition: `${posX}% ${posY}%`,
       backgroundColor: fit === 'contain' ? '#0f172a' : 'transparent',
     };
   };
@@ -205,7 +210,6 @@ export function MediaCarousel({
         className="w-full relative rounded-2xl overflow-hidden border border-white/10 shadow-xl"
         style={{
           aspectRatio: getAspectRatioValue(firstSlideRatio),
-          maxHeight: '40vh',
         }}
       >
         {firstSlide.mediaType === 'IMAGE' ? (
@@ -232,7 +236,6 @@ export function MediaCarousel({
       className="w-full relative group rounded-2xl overflow-hidden border border-white/10 shadow-xl transition-all duration-500 ease-in-out"
       style={{
         aspectRatio: getAspectRatioValue(activeSlideRatio),
-        maxHeight: '40vh',
       }}
       onTouchStart={handleTouchStart}
       onTouchEnd={handleTouchEnd}

@@ -161,7 +161,7 @@ function PromocoesContent() {
             validCampaigns.map((camp: any) => {
               const posX = camp.media_position_x ?? 50;
               const posY = camp.media_position_y ?? 50;
-              const fit = camp.media_fit || 'cover';
+              const fit = camp.media_fit ?? 'contain';
 
               return (
                 <div
@@ -173,7 +173,6 @@ function PromocoesContent() {
                       className="w-full relative overflow-hidden"
                       style={{
                         aspectRatio: getAspectRatioValue(camp.aspect_ratio),
-                        maxHeight: '35vh'
                       }}
                     >
                       <img
@@ -181,8 +180,8 @@ function PromocoesContent() {
                         alt={camp.title}
                         className="w-full h-full"
                         style={{
-                          objectPosition: `${posX}% ${posY}%`,
                           objectFit: fit as any,
+                          objectPosition: `${posX}% ${posY}%`,
                           backgroundColor: fit === 'contain' ? '#0f172a' : 'transparent',
                         }}
                       />

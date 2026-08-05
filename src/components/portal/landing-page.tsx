@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useMemo } from 'react';
 import { StoreSettings } from '@/types/database';
 import { Camera, Map, Star, Gift } from 'lucide-react';
 import { MediaCarousel, CarouselSlide } from './media-carousel';
@@ -45,47 +45,51 @@ export function LandingPage({ settings, onContinue }: LandingPageProps) {
   }, [settings.pre_signup_promotions_enabled]);
 
   // Build slides
-  const slides: CarouselSlide[] = [];
+  const slides = useMemo(() => {
+    const list: CarouselSlide[] = [];
  
-  if (settings.pre_signup_promotions_enabled !== false) {
-    // 1. Add Main Store Banner if enabled
-    if (settings.pre_signup_show_banner && settings.landing_media_url) {
-      slides.push({
-        id: 'main',
-        mediaUrl: settings.landing_media_url,
-        mediaType: settings.landing_media_type || 'IMAGE',
-        title: settings.featured_promo_title || undefined,
-        description: settings.featured_promo_description || undefined,
-        mediaPositionX: settings.landing_media_position_x ?? 50,
-        mediaPositionY: settings.landing_media_position_y ?? 50,
-        mediaFit: settings.landing_media_fit || 'cover',
-        isCampaign: false,
-        aspectRatio: settings.landing_media_aspect_ratio || '16:9',
-      });
-    }
- 
-    // 2. Add campaigns, filtering out duplicates of the main store banner
-    campaigns.forEach((camp: any) => {
-      if (camp.media_url && camp.media_url !== settings.landing_media_url) {
-        slides.push({
-          id: camp.id,
-          mediaUrl: camp.media_url,
-          mediaType: camp.media_type || 'IMAGE',
-          title: camp.title || undefined,
-          description: camp.description || undefined,
-          buttonText: camp.button_text || undefined,
-          buttonUrl: camp.button_url || undefined,
-          mediaPositionX: camp.media_position_x ?? 50,
-          mediaPositionY: camp.media_position_y ?? 50,
-          mediaFit: camp.media_fit || 'cover',
-          isCampaign: true,
-          aspectRatio: camp.aspect_ratio || '16:9',
+    if (settings.pre_signup_promotions_enabled !== false) {
+      // 1. Add Main Store Banner if enabled
+      if (settings.pre_signup_show_banner && settings.landing_media_url) {
+        list.push({
+          id: 'main',
+          mediaUrl: settings.landing_media_url,
+          mediaType: settings.landing_media_type || 'IMAGE',
+          title: settings.featured_promo_title || undefined,
+          description: settings.featured_promo_description || undefined,
+          positionX: settings.landing_media_position_x ?? 50,
+          positionY: settings.landing_media_position_y ?? 50,
+          fit: settings.landing_media_fit || 'contain',
+          isCampaign: false,
+          aspectRatio: settings.landing_media_aspect_ratio || '16:9',
         });
       }
-    });
-  }
+ 
+      // 2. Add campaigns, filtering out duplicates of the main store banner
+      campaigns.forEach((camp: any) => {
+        if (camp.media_url && camp.media_url !== settings.landing_media_url) {
+          list.push({
+            id: camp.id,
+            mediaUrl: camp.media_url,
+            mediaType: camp.media_type || 'IMAGE',
+            title: camp.title || undefined,
+            description: camp.description || undefined,
+            buttonText: camp.button_text || undefined,
+            buttonUrl: camp.button_url || undefined,
+            positionX: camp.media_position_x ?? 50,
+            positionY: camp.media_position_y ?? 50,
+            fit: camp.media_fit || 'contain',
+            isCampaign: true,
+            aspectRatio: camp.aspect_ratio || '16:9',
+          });
+        }
+      });
+    }
 
-  const handleSlideView = async (slide: CarouselSlide) => {
+    return list;
+  }, [settings, campaigns]);
+
+  const handleSlideView = React.useCallback(async (slide: CarouselSlide) => {
     if (slide.isCampaign && slide.id) {
       if (loggedImpressions.current.has(slide.id)) return;
       loggedImpressions.current.add(slide.id);
@@ -103,9 +107,9 @@ export function LandingPage({ settings, onContinue }: LandingPageProps) {
         console.warn('Erro ao registar impressão de campanha:', err);
       }
     }
-  };
+  }, []);
 
-  const handleSlideClick = async (slide: CarouselSlide) => {
+  const handleSlideClick = React.useCallback(async (slide: CarouselSlide) => {
     if (slide.isCampaign && slide.id) {
       try {
         await fetch('/api/portal/events', {
@@ -129,7 +133,7 @@ export function LandingPage({ settings, onContinue }: LandingPageProps) {
         window.open(slide.buttonUrl, '_blank', 'noopener,noreferrer');
       }
     }
-  };
+  }, []);
 
   return (
     <div className="w-full max-w-md mx-auto flex flex-col items-center">

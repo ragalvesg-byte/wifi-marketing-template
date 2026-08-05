@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect, useRef, useMemo } from 'react';
+import React, { useState, useEffect, useRef, useMemo, useCallback } from 'react';
 import { StoreSettings, OpenNdsParams } from '@/types/database';
 import { CheckCircle2, ExternalLink, Star, Camera, Utensils, Loader2, AlertCircle, X, Wifi, WifiOff, Gift } from 'lucide-react';
 import { sendVisitorEvent } from '@/lib/events';
@@ -103,40 +103,18 @@ export function PromoBanner({
           </button>
         )}
 
-        {hasMultiple ? (
-          <div className="w-full select-none" style={{ maxHeight: '35vh' }}>
+        {carouselSlides.length > 0 ? (
+          <div className="w-full select-none">
             <MediaCarousel
               slides={carouselSlides}
               onSlideView={onSlideView}
               onSlideClick={onSlideClick}
-              containerAspectRatio="4/3"
             />
           </div>
         ) : (
-          activeSlide.mediaUrl ? (
-            <div 
-              className="w-full bg-slate-100 relative overflow-hidden" 
-              style={{
-                aspectRatio: activeSlide.buttonUrl ? '4/3' : '16/9',
-                maxHeight: '35vh'
-              }}
-            >
-              <img 
-                src={activeSlide.mediaUrl} 
-                alt="Promoção" 
-                className="w-full h-full" 
-                style={{
-                  objectPosition: `${activeSlide.mediaPositionX ?? 50}% ${activeSlide.mediaPositionY ?? 50}%`,
-                  objectFit: activeSlide.mediaFit || 'cover',
-                  backgroundColor: activeSlide.mediaFit === 'contain' ? '#0f172a' : 'transparent',
-                }}
-              />
-            </div>
-          ) : (
-            <div className="w-full h-32 bg-gradient-to-br from-blue-500 to-purple-600 flex items-center justify-center text-white p-6">
-              <Star className="w-12 h-12 opacity-50" />
-            </div>
-          )
+          <div className="w-full h-32 bg-gradient-to-br from-blue-500 to-purple-600 flex items-center justify-center text-white p-6">
+            <Star className="w-12 h-12 opacity-50" />
+          </div>
         )}
 
         <div className="p-5 sm:p-6 bg-white flex-1 overflow-y-auto">
@@ -409,9 +387,9 @@ export function SuccessOffer({ settings, visitorId, visitorName, authUrl, openNd
         description: settings.post_signup_promo_description || undefined,
         buttonText: settings.post_signup_promo_button_text || 'Aproveitar Oferta',
         buttonUrl: settings.post_signup_promo_button_url || undefined,
-        mediaPositionX: settings.post_signup_media_position_x ?? 50,
-        mediaPositionY: settings.post_signup_media_position_y ?? 50,
-        mediaFit: settings.post_signup_media_fit || 'cover',
+        positionX: settings.post_signup_media_position_x,
+        positionY: settings.post_signup_media_position_y,
+        fit: settings.post_signup_media_fit,
         isCampaign: false,
         aspectRatio: settings.post_signup_promo_image_aspect_ratio || '4:5',
       });
@@ -427,9 +405,9 @@ export function SuccessOffer({ settings, visitorId, visitorName, authUrl, openNd
           description: camp.description || undefined,
           buttonText: camp.button_text || undefined,
           buttonUrl: camp.button_url || undefined,
-          mediaPositionX: camp.media_position_x ?? 50,
-          mediaPositionY: camp.media_position_y ?? 50,
-          mediaFit: camp.media_fit || 'cover',
+          positionX: camp.media_position_x,
+          positionY: camp.media_position_y,
+          fit: camp.media_fit,
           isCampaign: true,
           campaign: camp,
           aspectRatio: camp.aspect_ratio || '16:9',
@@ -438,7 +416,7 @@ export function SuccessOffer({ settings, visitorId, visitorName, authUrl, openNd
     });
 
     return list;
-  }, [settings, campaigns, hasPostSignupBannerConfig, settings.post_signup_promotions_enabled]);
+  }, [settings, campaigns, hasPostSignupBannerConfig]);
 
   const hasActiveSlides = slides.length > 0;
 
@@ -481,7 +459,7 @@ export function SuccessOffer({ settings, visitorId, visitorName, authUrl, openNd
     return url.startsWith('http://') || url.startsWith('https://');
   };
 
-  const getRedirectUrl = () => {
+  const getRedirectUrl = useCallback(() => {
     if (activePromoCampaign?.button_url) {
       return activePromoCampaign.button_url;
     }
@@ -494,9 +472,9 @@ export function SuccessOffer({ settings, visitorId, visitorName, authUrl, openNd
       case 'PROMO': return settings.post_signup_promo_button_url;
       default: return null;
     }
-  };
+  }, [activePromoCampaign, settings]);
 
-  const handleMarketingRedirect = () => {
+  const handleMarketingRedirect = useCallback(() => {
     const url = getRedirectUrl();
     if (activePromoCampaign) {
       sendVisitorEvent('CAMPAIGN_CLICK', {
@@ -508,9 +486,9 @@ export function SuccessOffer({ settings, visitorId, visitorName, authUrl, openNd
     } else if (isValidUrl(openNdsParams.redir) && typeof window !== 'undefined') {
       window.location.href = openNdsParams.redir!;
     }
-  };
+  }, [getRedirectUrl, activePromoCampaign, openNdsParams.redir]);
 
-  const handleRedirectAction = (url: string | null, isCampaign: boolean, campaignId?: string) => {
+  const handleRedirectAction = useCallback((url: string | null, isCampaign: boolean, campaignId?: string) => {
     if (isCampaign && campaignId) {
       sendVisitorEvent('CAMPAIGN_CLICK', {
         campaign_id: campaignId,
@@ -521,9 +499,9 @@ export function SuccessOffer({ settings, visitorId, visitorName, authUrl, openNd
     } else if (isValidUrl(openNdsParams.redir) && typeof window !== 'undefined') {
       window.location.href = openNdsParams.redir!;
     }
-  };
+  }, [openNdsParams.redir]);
 
-  const handleSlideView = async (slide: CarouselSlide) => {
+  const handleSlideView = useCallback(async (slide: CarouselSlide) => {
     if (slide.isCampaign && slide.campaign) {
       setActivePromoCampaign(slide.campaign);
     } else {
@@ -547,9 +525,9 @@ export function SuccessOffer({ settings, visitorId, visitorName, authUrl, openNd
         console.warn('Erro ao registrar impressão:', err);
       }
     }
-  };
+  }, []);
 
-  const handleSlideClick = async (slide: CarouselSlide) => {
+  const handleSlideClick = useCallback(async (slide: CarouselSlide) => {
     if (slide.isCampaign && slide.id) {
       try {
         await fetch('/api/portal/events', {
@@ -569,7 +547,7 @@ export function SuccessOffer({ settings, visitorId, visitorName, authUrl, openNd
         window.open(slide.buttonUrl, '_blank', 'noopener,noreferrer');
       }
     }
-  };
+  }, []);
 
   useEffect(() => {
     if (timeLeft === null) return;
@@ -584,12 +562,12 @@ export function SuccessOffer({ settings, visitorId, visitorName, authUrl, openNd
     }, 1000);
 
     return () => clearInterval(timer);
-  }, [timeLeft]);
+  }, [timeLeft, handleMarketingRedirect]);
 
-  const cancelRedirect = () => {
+  const cancelRedirect = useCallback(() => {
     setTimeLeft(null);
     setBannerVisible(false);
-  };
+  }, []);
 
   const primaryColor = settings.primary_color || '#2563eb';
 
@@ -647,7 +625,6 @@ export function SuccessOffer({ settings, visitorId, visitorName, authUrl, openNd
                 slides={carouselSlides}
                 onSlideView={handleSlideView}
                 onSlideClick={handleSlideClick}
-                containerAspectRatio="16/9"
               />
             </div>
             

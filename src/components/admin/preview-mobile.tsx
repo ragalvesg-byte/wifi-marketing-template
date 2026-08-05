@@ -41,7 +41,6 @@ export function PreviewMobile({ settings, step }: PreviewMobileProps) {
               className="w-full bg-black/40 rounded-2xl overflow-hidden mb-4 border border-white/10 shrink-0 relative"
               style={{
                 aspectRatio: getAspectRatioValue(settings.landing_media_aspect_ratio),
-                maxHeight: '35vh',
               }}
             >
               {settings.landing_media_type === 'IMAGE' && settings.landing_media_url ? (
@@ -51,8 +50,8 @@ export function PreviewMobile({ settings, step }: PreviewMobileProps) {
                   className="w-full h-full" 
                   style={{
                     objectPosition: `${settings.landing_media_position_x ?? 50}% ${settings.landing_media_position_y ?? 50}%`,
-                    objectFit: settings.landing_media_fit || 'cover',
-                    backgroundColor: settings.landing_media_fit === 'contain' ? '#0f172a' : 'transparent'
+                    objectFit: settings.landing_media_fit ?? 'contain',
+                    backgroundColor: (settings.landing_media_fit ?? 'contain') === 'contain' ? '#0f172a' : 'transparent'
                   }}
                 />
               ) : (
@@ -184,7 +183,6 @@ export function PreviewMobile({ settings, step }: PreviewMobileProps) {
                 className="w-full bg-black/40 relative overflow-hidden" 
                 style={{
                   aspectRatio: getAspectRatioValue(settings.post_signup_promo_image_aspect_ratio),
-                  maxHeight: '40vh'
                 }}
               >
                 <img 
@@ -193,8 +191,8 @@ export function PreviewMobile({ settings, step }: PreviewMobileProps) {
                   className="w-full h-full" 
                   style={{
                     objectPosition: `${settings.post_signup_media_position_x ?? 50}% ${settings.post_signup_media_position_y ?? 50}%`,
-                    objectFit: settings.post_signup_media_fit || 'cover',
-                    backgroundColor: settings.post_signup_media_fit === 'contain' ? '#0f172a' : 'transparent'
+                    objectFit: settings.post_signup_media_fit ?? 'contain',
+                    backgroundColor: (settings.post_signup_media_fit ?? 'contain') === 'contain' ? '#0f172a' : 'transparent'
                   }}
                 />
               </div>
@@ -269,7 +267,6 @@ export function PreviewMobile({ settings, step }: PreviewMobileProps) {
                 className="w-full bg-slate-100 relative" 
                 style={{
                   aspectRatio: getAspectRatioValue(settings.post_signup_promo_image_aspect_ratio),
-                  maxHeight: '50vh'
                 }}
               >
                 <img 
@@ -278,8 +275,8 @@ export function PreviewMobile({ settings, step }: PreviewMobileProps) {
                   className="w-full h-full" 
                   style={{
                     objectPosition: `${settings.post_signup_media_position_x ?? 50}% ${settings.post_signup_media_position_y ?? 50}%`,
-                    objectFit: settings.post_signup_media_fit || 'cover',
-                    backgroundColor: settings.post_signup_media_fit === 'contain' ? '#0f172a' : 'transparent'
+                    objectFit: settings.post_signup_media_fit ?? 'contain',
+                    backgroundColor: (settings.post_signup_media_fit ?? 'contain') === 'contain' ? '#0f172a' : 'transparent'
                   }}
                 />
               </div>
