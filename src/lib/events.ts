@@ -1,7 +1,6 @@
 import { VisitorEventType } from '@/types/database';
 
 export interface SendEventParams {
-  visitor_id?: string | null;
   wifi_session_id?: string | null;
   campaign_id?: string | null;
   anonymous_session_id?: string | null;
@@ -43,7 +42,7 @@ export function sendVisitorEvent(
 
   const payload = {
     event_type,
-    visitor_id: params.visitor_id || null,
+    // SEGURANÇA: visitor_id é resolvido no servidor pelo cookie httpOnly — nunca enviado pelo cliente
     wifi_session_id: params.wifi_session_id || null,
     campaign_id: params.campaign_id || null,
     anonymous_session_id: params.anonymous_session_id || getAnonymousSessionId(),

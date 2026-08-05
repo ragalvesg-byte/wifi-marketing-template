@@ -75,7 +75,6 @@ export default function PortalPage({ searchParams }: PortalPageProps) {
               setCheckingMac(false);
               // Registrar VISITOR_RETURNED somente quando o visitante for efetivamente reconhecido
               sendVisitorEvent('VISITOR_RETURNED', {
-                visitor_id: data.visitor.id,
                 metadata: {
                   method: 'mac_check',
                   total_visits: data.visitor.total_visits,

@@ -213,7 +213,7 @@ interface SecondaryActionsProps {
 
 export function SecondaryActions({ settings, visitorId }: SecondaryActionsProps) {
   const handleActionClick = (type: 'INSTAGRAM_CLICKED' | 'MENU_CLICKED' | 'GOOGLE_REVIEW_CLICKED') => {
-    sendVisitorEvent(type, { visitor_id: visitorId });
+    sendVisitorEvent(type);
   };
 
   return (
@@ -290,7 +290,6 @@ export function SuccessOffer({ settings, visitorId, visitorName, authUrl, openNd
         if (isMounted) {
           setAuthState('AUTHORIZED');
           sendVisitorEvent('WIFI_AUTH_SENT', {
-            visitor_id: visitorId,
             metadata: {
               auth_url: authUrl,
               gateway: openNdsParams.gatewayname || 'unknown'
@@ -326,7 +325,7 @@ export function SuccessOffer({ settings, visitorId, visitorName, authUrl, openNd
           const promoCamp = list.find((c: any) => c.type === 'PROMO' || c.type === 'COUPON');
           if (promoCamp) {
             setActivePromoCampaign(promoCamp);
-            sendVisitorEvent('CAMPAIGN_VIEWED', { visitor_id: visitorId, campaign_id: promoCamp.id });
+            sendVisitorEvent('CAMPAIGN_VIEWED', { campaign_id: promoCamp.id });
           }
         }
       } catch (err) {
@@ -389,7 +388,6 @@ export function SuccessOffer({ settings, visitorId, visitorName, authUrl, openNd
     const url = getRedirectUrl();
     if (activePromoCampaign) {
       sendVisitorEvent('CAMPAIGN_CLICKED', {
-        visitor_id: visitorId,
         campaign_id: activePromoCampaign.id,
       });
     }
