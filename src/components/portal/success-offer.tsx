@@ -355,10 +355,14 @@ export function SuccessOffer({ settings, visitorId, visitorName, authUrl, openNd
 
   // Carrega campanhas aplicáveis ao visitante
   useEffect(() => {
+    if (settings.post_signup_promotions_enabled === false) {
+      setLoadingCampaigns(false);
+      return;
+    }
     let isMounted = true;
     const getCampaigns = async () => {
       try {
-        const res = await fetch(`/api/portal/campaigns?visitorId=${visitorId || ''}&isDemo=${isDemoMode}`);
+        const res = await fetch(`/api/portal/campaigns?visitorId=${visitorId || ''}&stage=post_signup&isDemo=${isDemoMode}`);
         if (res.ok && isMounted) {
           const data = await res.json();
           const list = data.campaigns || [];
@@ -382,7 +386,7 @@ export function SuccessOffer({ settings, visitorId, visitorName, authUrl, openNd
     return () => {
       isMounted = false;
     };
-  }, [visitorId, isDemoMode, settings.post_signup_promo_image_url]);
+  }, [visitorId, isDemoMode, settings.post_signup_promo_image_url, settings.post_signup_promotions_enabled]);
 
   const hasPostSignupBannerConfig = useMemo(() => {
     return (settings.post_signup_action === 'PROMO' || settings.post_signup_action === 'BANNER') && !!settings.post_signup_promo_image_url;
@@ -391,6 +395,10 @@ export function SuccessOffer({ settings, visitorId, visitorName, authUrl, openNd
   // Build slides for carousel
   const slides = useMemo(() => {
     const list: CarouselSlide[] = [];
+
+    if (settings.post_signup_promotions_enabled === false) {
+      return list;
+    }
 
     if (hasPostSignupBannerConfig) {
       list.push({
@@ -405,6 +413,7 @@ export function SuccessOffer({ settings, visitorId, visitorName, authUrl, openNd
         mediaPositionY: settings.post_signup_media_position_y ?? 50,
         mediaFit: settings.post_signup_media_fit || 'cover',
         isCampaign: false,
+        aspectRatio: settings.post_signup_promo_image_aspect_ratio || '4:5',
       });
     }
 
@@ -423,12 +432,13 @@ export function SuccessOffer({ settings, visitorId, visitorName, authUrl, openNd
           mediaFit: camp.media_fit || 'cover',
           isCampaign: true,
           campaign: camp,
+          aspectRatio: camp.aspect_ratio || '16:9',
         });
       }
     });
 
     return list;
-  }, [settings, campaigns, hasPostSignupBannerConfig]);
+  }, [settings, campaigns, hasPostSignupBannerConfig, settings.post_signup_promotions_enabled]);
 
   const hasActiveSlides = slides.length > 0;
 
@@ -444,8 +454,9 @@ export function SuccessOffer({ settings, visitorId, visitorName, authUrl, openNd
   useEffect(() => {
     if (authState === 'AUTHORIZED' && !loadingCampaigns) {
       const hasCampaignSlides = slides.some(s => s.isCampaign);
-      const shouldShowModal = (hasCampaignSlides && settings.post_signup_banner_enabled !== false) ||
-                              (!hasCampaignSlides && settings.post_signup_action === 'BANNER' && settings.post_signup_banner_enabled !== false);
+      const shouldShowModal = settings.post_signup_promotions_enabled !== false &&
+                              ((hasCampaignSlides && settings.post_signup_banner_enabled !== false) ||
+                               (!hasCampaignSlides && settings.post_signup_action === 'BANNER' && settings.post_signup_banner_enabled !== false));
       
       if (shouldShowModal) {
         setBannerVisible(true);
@@ -629,7 +640,7 @@ export function SuccessOffer({ settings, visitorId, visitorName, authUrl, openNd
         </div>
 
         {/* Carousel de mídias inline na tela de sucesso */}
-        {hasActiveSlides && (
+        {settings.post_signup_promotions_enabled !== false && settings.promotions_carousel_enabled !== false && hasActiveSlides && (
           <div className="w-full bg-slate-50 border border-slate-200 rounded-2xl overflow-hidden shadow-sm mt-4">
             <div className="w-full relative overflow-hidden">
               <MediaCarousel
@@ -680,12 +691,14 @@ export function SuccessOffer({ settings, visitorId, visitorName, authUrl, openNd
         )}
 
         {/* View all promos page link */}
-        <a 
-          href={`/portal/promocoes${urlParams}`}
-          className="w-full py-3.5 rounded-2xl font-bold text-sm bg-slate-900/5 hover:bg-slate-900/10 border border-slate-200 flex items-center justify-center gap-2 text-slate-800 transition-all text-center"
-        >
-          <Gift className="w-5 h-5 text-emerald-500" /> Ver Minhas Promoções
-        </a>
+        {settings.post_signup_promotions_enabled !== false && settings.promotions_button_enabled !== false && (
+          <a 
+            href={`/portal/promocoes${urlParams}`}
+            className="w-full py-3.5 rounded-2xl font-bold text-sm bg-slate-900/5 hover:bg-slate-900/10 border border-slate-200 flex items-center justify-center gap-2 text-slate-800 transition-all text-center"
+          >
+            <Gift className="w-5 h-5 text-emerald-500" /> Ver Minhas Promoções
+          </a>
+        )}
 
         <SecondaryActions settings={settings} visitorId={visitorId} />
 

@@ -60,9 +60,14 @@ const ALLOWED_SETTING_FIELDS = [
   'landing_media_position_x',
   'landing_media_position_y',
   'landing_media_fit',
+  'landing_media_aspect_ratio',
   'post_signup_media_position_x',
   'post_signup_media_position_y',
-  'post_signup_media_fit'
+  'post_signup_media_fit',
+  'pre_signup_promotions_enabled',
+  'post_signup_promotions_enabled',
+  'promotions_button_enabled',
+  'promotions_carousel_enabled'
 ];
 
 function filterPublicSettings(settings: any) {

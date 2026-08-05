@@ -156,9 +156,14 @@ export async function POST(request: Request) {
       landing_media_position_x: landingX,
       landing_media_position_y: landingY,
       landing_media_fit: landingFit,
+      landing_media_aspect_ratio: body.landing_media_aspect_ratio || '16:9',
       post_signup_media_position_x: postX,
       post_signup_media_position_y: postY,
       post_signup_media_fit: postFit,
+      pre_signup_promotions_enabled: body.pre_signup_promotions_enabled ?? true,
+      post_signup_promotions_enabled: body.post_signup_promotions_enabled ?? true,
+      promotions_button_enabled: body.promotions_button_enabled ?? true,
+      promotions_carousel_enabled: body.promotions_carousel_enabled ?? true,
       updated_at: new Date().toISOString(),
     };
 

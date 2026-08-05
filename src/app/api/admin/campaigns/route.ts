@@ -105,6 +105,9 @@ export async function POST(request: Request) {
       media_position_x = 50,
       media_position_y = 50,
       media_fit = 'cover',
+      show_pre_signup = true,
+      show_post_signup = true,
+      show_promotions_page = true,
       // Target
       target_type = 'ALL',
       rules = {},
@@ -145,6 +148,9 @@ export async function POST(request: Request) {
         media_position_x,
         media_position_y,
         media_fit,
+        show_pre_signup,
+        show_post_signup,
+        show_promotions_page,
         created_at: new Date().toISOString(),
         updated_at: new Date().toISOString(),
         campaign_audiences: [
@@ -185,6 +191,9 @@ export async function POST(request: Request) {
         media_position_x,
         media_position_y,
         media_fit,
+        show_pre_signup,
+        show_post_signup,
+        show_promotions_page,
       })
       .select()
       .single();
@@ -278,6 +287,9 @@ export async function PUT(request: Request) {
       media_position_x,
       media_position_y,
       media_fit,
+      show_pre_signup = true,
+      show_post_signup = true,
+      show_promotions_page = true,
       // Target
       target_type = 'ALL',
       rules = {},
@@ -329,6 +341,9 @@ export async function PUT(request: Request) {
         media_position_x: positionX,
         media_position_y: positionY,
         media_fit: fit,
+        show_pre_signup,
+        show_post_signup,
+        show_promotions_page,
         updated_at: new Date().toISOString(),
         campaign_audiences: [
           {
@@ -389,6 +404,9 @@ export async function PUT(request: Request) {
             media_position_x: prevCampaign.media_position_x,
             media_position_y: prevCampaign.media_position_y,
             media_fit: prevCampaign.media_fit,
+            show_pre_signup: prevCampaign.show_pre_signup,
+            show_post_signup: prevCampaign.show_post_signup,
+            show_promotions_page: prevCampaign.show_promotions_page,
             updated_at: prevCampaign.updated_at,
           })
           .eq('id', id);
@@ -430,6 +448,9 @@ export async function PUT(request: Request) {
         media_position_x: positionX,
         media_position_y: positionY,
         media_fit: fit,
+        show_pre_signup,
+        show_post_signup,
+        show_promotions_page,
         updated_at: new Date().toISOString(),
       })
       .eq('id', id);

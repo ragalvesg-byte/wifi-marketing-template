@@ -30,6 +30,7 @@ export interface StoreSettings {
   landing_media_position_x?: number;
   landing_media_position_y?: number;
   landing_media_fit?: 'cover' | 'contain';
+  landing_media_aspect_ratio?: '9:16' | '4:5' | '1:1' | '16:9';
 
   // Links Sociais e Utilitários
   instagram_url?: string;
@@ -83,6 +84,12 @@ export interface StoreSettings {
   post_signup_show_instagram?: boolean;
   post_signup_show_menu?: boolean;
   post_signup_show_google_review?: boolean;
+
+  // Controles de Exibição de Promoções
+  pre_signup_promotions_enabled?: boolean;
+  post_signup_promotions_enabled?: boolean;
+  promotions_button_enabled?: boolean;
+  promotions_carousel_enabled?: boolean;
 
   // Regras de Recadastro e Termos
   relogin_days_interval: number;
@@ -213,6 +220,9 @@ export interface Campaign {
   media_position_x?: number;
   media_position_y?: number;
   media_fit?: 'cover' | 'contain';
+  show_pre_signup?: boolean;
+  show_post_signup?: boolean;
+  show_promotions_page?: boolean;
   created_at?: string;
   updated_at?: string;
 }

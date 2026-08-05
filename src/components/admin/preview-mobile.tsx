@@ -3,6 +3,7 @@
 import React from 'react';
 import { StoreSettings } from '@/types/database';
 import { CheckCircle2, Copy, Star, Camera, Map, Check, X } from 'lucide-react';
+import { getAspectRatioValue } from '@/lib/aspect-ratio';
 
 interface PreviewMobileProps {
   settings: StoreSettings;
@@ -36,7 +37,13 @@ export function PreviewMobile({ settings, step }: PreviewMobileProps) {
           <h1 className="text-xl font-bold text-center mb-6">{settings.store_name}</h1>
 
           {settings.pre_signup_show_banner && (
-            <div className="w-full h-40 bg-black/40 rounded-2xl overflow-hidden mb-4 border border-white/10 shrink-0">
+            <div 
+              className="w-full bg-black/40 rounded-2xl overflow-hidden mb-4 border border-white/10 shrink-0 relative"
+              style={{
+                aspectRatio: getAspectRatioValue(settings.landing_media_aspect_ratio),
+                maxHeight: '35vh',
+              }}
+            >
               {settings.landing_media_type === 'IMAGE' && settings.landing_media_url ? (
                 <img 
                   src={settings.landing_media_url} 
@@ -176,10 +183,7 @@ export function PreviewMobile({ settings, step }: PreviewMobileProps) {
               <div 
                 className="w-full bg-black/40 relative overflow-hidden" 
                 style={{
-                  aspectRatio: settings.post_signup_promo_image_aspect_ratio === '9:16' ? '9/16' 
-                    : settings.post_signup_promo_image_aspect_ratio === '1:1' ? '1/1'
-                    : settings.post_signup_promo_image_aspect_ratio === '16:9' ? '16/9'
-                    : '4/5',
+                  aspectRatio: getAspectRatioValue(settings.post_signup_promo_image_aspect_ratio),
                   maxHeight: '40vh'
                 }}
               >
@@ -264,10 +268,7 @@ export function PreviewMobile({ settings, step }: PreviewMobileProps) {
               <div 
                 className="w-full bg-slate-100 relative" 
                 style={{
-                  aspectRatio: settings.post_signup_promo_image_aspect_ratio === '9:16' ? '9/16' 
-                    : settings.post_signup_promo_image_aspect_ratio === '1:1' ? '1/1'
-                    : settings.post_signup_promo_image_aspect_ratio === '16:9' ? '16/9'
-                    : '4/5',
+                  aspectRatio: getAspectRatioValue(settings.post_signup_promo_image_aspect_ratio),
                   maxHeight: '50vh'
                 }}
               >
