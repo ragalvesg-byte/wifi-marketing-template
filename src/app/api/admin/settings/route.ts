@@ -64,6 +64,22 @@ export async function POST(request: Request) {
     const sanitizedPostSignupPromoImage = validateUrl(body.post_signup_promo_image_url);
     const sanitizedPostSignupPromoButton = validateUrl(body.post_signup_promo_button_url);
 
+    const landingX = body.landing_media_position_x ?? 50;
+    const landingY = body.landing_media_position_y ?? 50;
+    const postX = body.post_signup_media_position_x ?? 50;
+    const postY = body.post_signup_media_position_y ?? 50;
+
+    if (landingX < 0 || landingX > 100 || landingY < 0 || landingY > 100 ||
+        postX < 0 || postX > 100 || postY < 0 || postY > 100) {
+      return NextResponse.json({ error: 'Os valores de posicionamento X e Y devem estar entre 0 e 100.' }, { status: 400 });
+    }
+
+    const landingFit = body.landing_media_fit || 'cover';
+    const postFit = body.post_signup_media_fit || 'cover';
+    if (!['cover', 'contain'].includes(landingFit) || !['cover', 'contain'].includes(postFit)) {
+      return NextResponse.json({ error: 'O enquadramento deve ser cover ou contain.' }, { status: 400 });
+    }
+
     if (!supabase) {
       return NextResponse.json({
         success: true,
@@ -137,6 +153,12 @@ export async function POST(request: Request) {
       field_gender_required: body.field_gender_required ?? false,
 
       relogin_days_interval: body.relogin_days_interval || 7,
+      landing_media_position_x: landingX,
+      landing_media_position_y: landingY,
+      landing_media_fit: landingFit,
+      post_signup_media_position_x: postX,
+      post_signup_media_position_y: postY,
+      post_signup_media_fit: postFit,
       updated_at: new Date().toISOString(),
     };
 

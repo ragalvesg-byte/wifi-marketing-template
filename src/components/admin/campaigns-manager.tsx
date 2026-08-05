@@ -31,6 +31,9 @@ export function CampaignsManager() {
   const [buttonUrl, setButtonUrl] = useState('');
   const [startDate, setStartDate] = useState('');
   const [endDate, setEndDate] = useState('');
+  const [mediaPositionX, setMediaPositionX] = useState(50);
+  const [mediaPositionY, setMediaPositionY] = useState(50);
+  const [mediaFit, setMediaFit] = useState<'cover' | 'contain'>('cover');
 
   // Target State
   const [targetType, setTargetType] = useState<'ALL' | 'NEW_VISITORS' | 'RETURNING_VISITORS' | 'GENDER' | 'BIRTHDAY_MONTH'>('ALL');
@@ -58,6 +61,9 @@ export function CampaignsManager() {
     };
     setStartDate(formatDate(campaign.start_date));
     setEndDate(formatDate(campaign.end_date));
+    setMediaPositionX(campaign.media_position_x ?? 50);
+    setMediaPositionY(campaign.media_position_y ?? 50);
+    setMediaFit(campaign.media_fit || 'cover');
 
     const audience = campaign.campaign_audiences?.[0];
     if (audience) {
@@ -87,6 +93,9 @@ export function CampaignsManager() {
         media_url: campaign.media_url,
         media_type: campaign.media_type,
         aspect_ratio: campaign.aspect_ratio,
+        media_position_x: campaign.media_position_x ?? 50,
+        media_position_y: campaign.media_position_y ?? 50,
+        media_fit: campaign.media_fit || 'cover',
         button_text: campaign.button_text,
         button_url: campaign.button_url,
         start_date: campaign.start_date,
@@ -213,6 +222,9 @@ export function CampaignsManager() {
     setEndDate('');
     setTargetType('ALL');
     setBirthdayMonthRule('8');
+    setMediaPositionX(50);
+    setMediaPositionY(50);
+    setMediaFit('cover');
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -253,6 +265,9 @@ export function CampaignsManager() {
       media_url: mediaUrl || null,
       media_type: mediaType,
       aspect_ratio: aspectRatio,
+      media_position_x: mediaPositionX,
+      media_position_y: mediaPositionY,
+      media_fit: mediaFit,
       button_text: buttonText || null,
       button_url: buttonUrl || null,
       start_date: startDate || null,
@@ -567,15 +582,36 @@ export function CampaignsManager() {
             )}
 
             {mediaType === 'IMAGE' ? (
-              <div className="md:col-span-2">
-                <ImageUploader
-                  value={mediaUrl}
-                  onChange={(url) => setMediaUrl(url)}
-                  folder="campaigns"
-                  label="Carregar imagem"
-                  disableUrlInput={true}
-                />
-              </div>
+              <>
+                <div className="md:col-span-2">
+                  <ImageUploader
+                    value={mediaUrl}
+                    onChange={(url) => setMediaUrl(url)}
+                    folder="campaigns"
+                    label="Carregar imagem"
+                    disableUrlInput={true}
+                  />
+                </div>
+                {mediaUrl && (
+                  <div className="md:col-span-2 p-4 bg-slate-50 rounded-2xl border border-slate-200/60 grid grid-cols-1 md:grid-cols-3 gap-4 mt-2 text-slate-900">
+                    <div>
+                      <label className="block text-xs font-semibold uppercase text-slate-600 mb-1">Enquadramento</label>
+                      <select value={mediaFit} onChange={(e) => setMediaFit(e.target.value as any)} className="w-full px-4 py-2.5 rounded-xl border border-slate-200 text-sm font-semibold">
+                        <option value="cover">Corte (Cover)</option>
+                        <option value="contain">Inteiro (Contain)</option>
+                      </select>
+                    </div>
+                    <div>
+                      <label className="block text-xs font-semibold uppercase text-slate-600 mb-1">Posição Horizontal: {mediaPositionX}%</label>
+                      <input type="range" min="0" max="100" value={mediaPositionX} onChange={(e) => setMediaPositionX(parseInt(e.target.value))} className="w-full h-2 bg-slate-200 rounded-lg appearance-none cursor-pointer mt-3" />
+                    </div>
+                    <div>
+                      <label className="block text-xs font-semibold uppercase text-slate-600 mb-1">Posição Vertical: {mediaPositionY}%</label>
+                      <input type="range" min="0" max="100" value={mediaPositionY} onChange={(e) => setMediaPositionY(parseInt(e.target.value))} className="w-full h-2 bg-slate-200 rounded-lg appearance-none cursor-pointer mt-3" />
+                    </div>
+                  </div>
+                )}
+              </>
             ) : (
               <div className="md:col-span-2 space-y-2">
                 <label className="block text-sm font-semibold text-slate-700">Link do vídeo (iniciando com https://)</label>

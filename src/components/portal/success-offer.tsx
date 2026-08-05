@@ -1,9 +1,10 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef, useMemo } from 'react';
 import { StoreSettings, OpenNdsParams } from '@/types/database';
-import { CheckCircle2, ExternalLink, Star, Camera, Utensils, Loader2, AlertCircle, X, Wifi, WifiOff } from 'lucide-react';
+import { CheckCircle2, ExternalLink, Star, Camera, Utensils, Loader2, AlertCircle, X, Wifi, WifiOff, Gift } from 'lucide-react';
 import { sendVisitorEvent } from '@/lib/events';
+import { MediaCarousel, CarouselSlide } from './media-carousel';
 
 interface SuccessOfferProps {
   settings: StoreSettings;
@@ -14,7 +15,7 @@ interface SuccessOfferProps {
 }
 
 // ==========================================
-// Sub-componentes Refatorados (Etapa 3)
+// Sub-componentes Refatorados
 // ==========================================
 
 interface AuthorizationGateProps {
@@ -57,102 +58,135 @@ export function AuthorizationGate({ authState, isRealMode }: AuthorizationGatePr
 interface PromoBannerProps {
   visible: boolean;
   settings: StoreSettings;
+  slides: CarouselSlide[];
+  carouselSlides: CarouselSlide[];
   timeLeft: number | null;
   primaryColor: string;
   onCancel: () => void;
-  onRedirect: () => void;
+  onRedirect: (url: string | null, isCampaign: boolean, campaignId?: string) => void;
+  onSlideView: (slide: CarouselSlide) => void;
+  onSlideClick: (slide: CarouselSlide) => void;
+  activePromoCampaign: any;
 }
 
 export function PromoBanner({
   visible,
   settings,
-  activePromoCampaign,
+  slides,
+  carouselSlides,
   timeLeft,
   primaryColor,
   onCancel,
   onRedirect,
-}: PromoBannerProps & { activePromoCampaign?: any }) {
-  if (!visible) return null;
+  onSlideView,
+  onSlideClick,
+  activePromoCampaign,
+}: PromoBannerProps) {
+  if (!visible || slides.length === 0) return null;
+
+  const hasMultiple = slides.length > 1;
+  const activeSlide = slides[0];
 
   const title = activePromoCampaign?.title || settings.post_signup_promo_title;
   const description = activePromoCampaign?.description || settings.post_signup_promo_description;
-  const mediaUrl = activePromoCampaign?.media_url || settings.post_signup_promo_image_url;
-  const aspectRatio = activePromoCampaign?.aspect_ratio || settings.post_signup_promo_image_aspect_ratio || '4:5';
   const buttonText = activePromoCampaign?.button_text || settings.post_signup_promo_button_text || 'Ir agora';
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 sm:p-6 bg-black/60 backdrop-blur-sm animate-in fade-in">
-      <div className="w-full max-w-md bg-white rounded-3xl shadow-2xl overflow-hidden relative flex flex-col animate-in zoom-in-95">
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm animate-in fade-in">
+      <div className="w-full max-w-md bg-white rounded-3xl shadow-2xl overflow-hidden relative flex flex-col max-h-[85vh] sm:max-h-[90vh] animate-in zoom-in-95">
         {settings.post_signup_banner_closable && (
           <button 
             onClick={onCancel}
-            className="absolute top-3 right-3 z-10 w-8 h-8 bg-black/50 hover:bg-black/70 text-white rounded-full flex items-center justify-center backdrop-blur-md transition-colors"
+            className="absolute top-3 right-3 z-30 w-8 h-8 bg-black/50 hover:bg-black/70 text-white rounded-full flex items-center justify-center backdrop-blur-md transition-colors"
           >
             <X className="w-5 h-5" />
           </button>
         )}
 
-        {mediaUrl ? (
-           <div 
-              className="w-full bg-slate-100 relative" 
+        {hasMultiple ? (
+          <div className="w-full select-none" style={{ maxHeight: '35vh' }}>
+            <MediaCarousel
+              slides={carouselSlides}
+              onSlideView={onSlideView}
+              onSlideClick={onSlideClick}
+              containerAspectRatio="4/3"
+            />
+          </div>
+        ) : (
+          activeSlide.mediaUrl ? (
+            <div 
+              className="w-full bg-slate-100 relative overflow-hidden" 
               style={{
-                aspectRatio: aspectRatio === '9:16' ? '9/16' 
-                  : aspectRatio === '1:1' ? '1/1'
-                  : aspectRatio === '16:9' ? '16/9'
-                  : '4/5',
-                maxHeight: '60vh'
+                aspectRatio: activeSlide.buttonUrl ? '4/3' : '16/9',
+                maxHeight: '35vh'
               }}
             >
-              <img src={mediaUrl} alt="Banner" className="w-full h-full object-cover" />
+              <img 
+                src={activeSlide.mediaUrl} 
+                alt="Promoção" 
+                className="w-full h-full" 
+                style={{
+                  objectPosition: `${activeSlide.mediaPositionX ?? 50}% ${activeSlide.mediaPositionY ?? 50}%`,
+                  objectFit: activeSlide.mediaFit || 'cover',
+                  backgroundColor: activeSlide.mediaFit === 'contain' ? '#0f172a' : 'transparent',
+                }}
+              />
             </div>
-        ) : (
-           <div className="w-full h-40 bg-gradient-to-br from-blue-500 to-purple-600 flex items-center justify-center text-white p-6">
-             <Star className="w-12 h-12 opacity-50" />
-           </div>
+          ) : (
+            <div className="w-full h-32 bg-gradient-to-br from-blue-500 to-purple-600 flex items-center justify-center text-white p-6">
+              <Star className="w-12 h-12 opacity-50" />
+            </div>
+          )
         )}
 
-        <div className="p-6 bg-white flex-1 overflow-y-auto">
-           {title && <h2 className="text-xl font-black text-slate-900 mb-2">{title}</h2>}
-           {description && <p className="text-sm text-slate-600 mb-6">{description}</p>}
-           
-           {timeLeft !== null ? (
-             <div className="space-y-3">
-               <p className="text-xs font-bold text-center text-slate-500 mb-2">Redirecionando em {timeLeft} segundos...</p>
-               <button 
-                 onClick={onRedirect}
-                 style={{ backgroundColor: primaryColor }}
-                 className="w-full py-3.5 rounded-xl text-white font-bold text-sm shadow-lg hover:opacity-95 transition-opacity"
-               >
-                 {buttonText}
-               </button>
-               <button 
-                 onClick={onCancel}
-                 className="w-full py-3 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-600 font-bold text-sm transition-colors"
-               >
-                 Cancelar redirecionamento
-               </button>
-             </div>
-           ) : (
-             <div className="space-y-3">
-               {buttonText && (
-                  <button 
-                    onClick={onRedirect}
-                    style={{ backgroundColor: primaryColor }}
-                    className="w-full py-3.5 rounded-xl text-white font-bold text-sm shadow-lg hover:opacity-95 transition-opacity"
-                  >
-                    {buttonText}
-                  </button>
-               )}
-               {settings.post_signup_banner_closable && (
-                 <button 
-                    onClick={onCancel}
-                    className="w-full py-3 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-600 font-bold text-sm transition-colors"
-                  >
-                    Fechar
-                  </button>
-               )}
-             </div>
-           )}
+        <div className="p-5 sm:p-6 bg-white flex-1 overflow-y-auto">
+          {title && <h2 className="text-lg font-black text-slate-900 mb-1.5">{title}</h2>}
+          {description && <p className="text-xs text-slate-600 mb-4">{description}</p>}
+
+          {timeLeft !== null ? (
+            <div className="space-y-2 mt-2">
+              <p className="text-[10px] font-bold text-center text-slate-500 mb-1">Redirecionando em {timeLeft} segundos...</p>
+              <button 
+                onClick={() => {
+                  const url = activePromoCampaign?.button_url || settings.post_signup_promo_button_url;
+                  onRedirect(url || null, !!activePromoCampaign, activePromoCampaign?.id);
+                }}
+                style={{ backgroundColor: primaryColor }}
+                className="w-full py-3 rounded-xl text-white font-bold text-xs shadow-md hover:opacity-95 transition-opacity"
+              >
+                {buttonText}
+              </button>
+              <button 
+                onClick={onCancel}
+                className="w-full py-2.5 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-600 font-bold text-xs transition-colors"
+              >
+                Cancelar redirecionamento
+              </button>
+            </div>
+          ) : (
+            <div className="space-y-2 mt-2">
+              {buttonText && (activePromoCampaign?.button_url || settings.post_signup_promo_button_url) && (
+                <button 
+                  onClick={() => {
+                    const url = activePromoCampaign?.button_url || settings.post_signup_promo_button_url;
+                    onRedirect(url || null, !!activePromoCampaign, activePromoCampaign?.id);
+                  }}
+                  style={{ backgroundColor: primaryColor }}
+                  className="w-full py-3 rounded-xl text-white font-bold text-xs shadow-md hover:opacity-95 transition-opacity"
+                >
+                  {buttonText}
+                </button>
+              )}
+              {settings.post_signup_banner_closable && (
+                <button 
+                  onClick={onCancel}
+                  className="w-full py-2.5 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-600 font-bold text-xs transition-colors"
+                >
+                  Fechar
+                </button>
+              )}
+            </div>
+          )}
         </div>
       </div>
     </div>
@@ -177,7 +211,9 @@ export function CountdownRedirect({
   if (timeLeft !== null && !bannerVisible) {
     return (
       <div className="mt-6 pt-4 border-t border-slate-100 space-y-3">
-        <p className="text-sm font-semibold text-slate-700">Redirecionando em {timeLeft} segundos...</p>
+        <p className="text-sm font-semibold text-slate-700">
+          Redirecionando em {timeLeft} segundos...
+        </p>
         <div className="flex gap-2">
           <button onClick={onCancel} className="flex-1 py-3 rounded-xl bg-slate-100 text-slate-600 font-bold text-xs hover:bg-slate-200 transition-colors">
             Cancelar
@@ -198,7 +234,6 @@ export function CountdownRedirect({
         className="w-full py-4 rounded-xl text-white font-bold text-base shadow-lg hover:opacity-95 transition-all flex items-center justify-center gap-2 mt-2"
       >
         Navegar na Internet
-        <ExternalLink className="w-5 h-5" />
       </button>
     );
   }
@@ -267,10 +302,19 @@ export function SuccessOffer({ settings, visitorId, visitorName, authUrl, openNd
   const [timeLeft, setTimeLeft] = useState<number | null>(null);
 
   // Estados de Campanhas Dinâmicas
-  const [activePromoCampaign, setActivePromoCampaign] = useState<any>(null);
+  const [campaigns, setCampaigns] = useState<any[]>([]);
   const [loadingCampaigns, setLoadingCampaigns] = useState(true);
+  const [activePromoCampaign, setActivePromoCampaign] = useState<any>(null);
+  const loggedImpressions = useRef<Set<string>>(new Set());
 
-  // Modo real é ativado somente se openNdsParams.isRealMode for true E houver authUrl válida
+  // URL search params for page transitions
+  const [urlParams, setUrlParams] = useState('');
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      setUrlParams(window.location.search);
+    }
+  }, []);
+
   const isRealMode = Boolean(openNdsParams.isRealMode && authUrl);
   const isDemoMode = !isRealMode;
 
@@ -278,13 +322,11 @@ export function SuccessOffer({ settings, visitorId, visitorName, authUrl, openNd
     let isMounted = true;
 
     const authorizeWifi = async () => {
-      // Se estiver em modo demonstração: NÃO faz fetch para o roteador e NÃO exibe falha de liberação
       if (isDemoMode || !authUrl) {
         if (isMounted) setAuthState('AUTHORIZED');
         return;
       }
 
-      // No modo real: envia autorização para o IP/porta do roteador openNDS
       try {
         await fetch(authUrl, { mode: 'no-cors', cache: 'no-store' });
         if (isMounted) {
@@ -311,7 +353,7 @@ export function SuccessOffer({ settings, visitorId, visitorName, authUrl, openNd
     };
   }, [authUrl, isDemoMode]);
 
-  // Carrega campanhas dinâmicas assim que o componente é montado
+  // Carrega campanhas aplicáveis ao visitante
   useEffect(() => {
     let isMounted = true;
     const getCampaigns = async () => {
@@ -320,12 +362,12 @@ export function SuccessOffer({ settings, visitorId, visitorName, authUrl, openNd
         if (res.ok && isMounted) {
           const data = await res.json();
           const list = data.campaigns || [];
+          setCampaigns(list);
 
-          // Campanhas COUPON legadas são tratadas como PROMO no portal
-          const promoCamp = list.find((c: any) => c.type === 'PROMO' || c.type === 'COUPON');
-          if (promoCamp) {
-            setActivePromoCampaign(promoCamp);
-            sendVisitorEvent('CAMPAIGN_VIEWED', { campaign_id: promoCamp.id });
+          // Inicializar a primeira campanha ativa como padrão
+          const firstCamp = list.find((c: any) => c.media_url && c.media_url !== settings.post_signup_promo_image_url);
+          if (firstCamp) {
+            setActivePromoCampaign(firstCamp);
           }
         }
       } catch (err) {
@@ -340,14 +382,72 @@ export function SuccessOffer({ settings, visitorId, visitorName, authUrl, openNd
     return () => {
       isMounted = false;
     };
-  }, [visitorId, isDemoMode]);
+  }, [visitorId, isDemoMode, settings.post_signup_promo_image_url]);
+
+  const hasPostSignupBannerConfig = useMemo(() => {
+    return (settings.post_signup_action === 'PROMO' || settings.post_signup_action === 'BANNER') && !!settings.post_signup_promo_image_url;
+  }, [settings]);
+
+  // Build slides for carousel
+  const slides = useMemo(() => {
+    const list: CarouselSlide[] = [];
+
+    if (hasPostSignupBannerConfig) {
+      list.push({
+        id: 'post-main',
+        mediaUrl: settings.post_signup_promo_image_url!,
+        mediaType: 'IMAGE',
+        title: settings.post_signup_promo_title || undefined,
+        description: settings.post_signup_promo_description || undefined,
+        buttonText: settings.post_signup_promo_button_text || 'Aproveitar Oferta',
+        buttonUrl: settings.post_signup_promo_button_url || undefined,
+        mediaPositionX: settings.post_signup_media_position_x ?? 50,
+        mediaPositionY: settings.post_signup_media_position_y ?? 50,
+        mediaFit: settings.post_signup_media_fit || 'cover',
+        isCampaign: false,
+      });
+    }
+
+    campaigns.forEach((camp: any) => {
+      if (camp.media_url && camp.media_url !== settings.post_signup_promo_image_url) {
+        list.push({
+          id: camp.id,
+          mediaUrl: camp.media_url,
+          mediaType: camp.media_type || 'IMAGE',
+          title: camp.title || undefined,
+          description: camp.description || undefined,
+          buttonText: camp.button_text || undefined,
+          buttonUrl: camp.button_url || undefined,
+          mediaPositionX: camp.media_position_x ?? 50,
+          mediaPositionY: camp.media_position_y ?? 50,
+          mediaFit: camp.media_fit || 'cover',
+          isCampaign: true,
+          campaign: camp,
+        });
+      }
+    });
+
+    return list;
+  }, [settings, campaigns, hasPostSignupBannerConfig]);
+
+  const hasActiveSlides = slides.length > 0;
+
+  // Strip text attributes for the carousel slides to avoid text overlay duplication (card handles texts)
+  const carouselSlides = useMemo(() => {
+    return slides.map(slide => ({
+      ...slide,
+      title: undefined,
+      description: undefined,
+    }));
+  }, [slides]);
 
   useEffect(() => {
     if (authState === 'AUTHORIZED' && !loadingCampaigns) {
-      if (
-        (activePromoCampaign && settings.post_signup_banner_enabled !== false) ||
-        (!activePromoCampaign && settings.post_signup_action === 'BANNER' && settings.post_signup_banner_enabled !== false)
-      ) {
+      const hasCampaignSlides = slides.some(s => s.isCampaign);
+      const shouldShowModal = (hasCampaignSlides && settings.post_signup_banner_enabled !== false) ||
+                              (!hasCampaignSlides && settings.post_signup_action === 'BANNER' && settings.post_signup_banner_enabled !== false);
+      
+      if (shouldShowModal) {
         setBannerVisible(true);
       }
 
@@ -358,14 +458,15 @@ export function SuccessOffer({ settings, visitorId, visitorName, authUrl, openNd
       } else if (settings.post_signup_redirect_mode === 'AUTO_10S') {
         setTimeLeft(10);
       } else {
-        // Para NONE e ON_CLICK, garante que o timer está inativo (null) e não redireciona
         setTimeLeft(null);
       }
     }
-  }, [authState, loadingCampaigns, settings, activePromoCampaign]);
+  }, [authState, loadingCampaigns, settings, hasActiveSlides, slides]);
 
   const isValidUrl = (url?: string | null): boolean => {
     if (!url) return false;
+    const lower = url.toLowerCase().trim();
+    if (lower.startsWith('javascript:') || lower.startsWith('data:')) return false;
     return url.startsWith('http://') || url.startsWith('https://');
   };
 
@@ -387,7 +488,7 @@ export function SuccessOffer({ settings, visitorId, visitorName, authUrl, openNd
   const handleMarketingRedirect = () => {
     const url = getRedirectUrl();
     if (activePromoCampaign) {
-      sendVisitorEvent('CAMPAIGN_CLICKED', {
+      sendVisitorEvent('CAMPAIGN_CLICK', {
         campaign_id: activePromoCampaign.id,
       });
     }
@@ -395,6 +496,67 @@ export function SuccessOffer({ settings, visitorId, visitorName, authUrl, openNd
       window.location.href = url!;
     } else if (isValidUrl(openNdsParams.redir) && typeof window !== 'undefined') {
       window.location.href = openNdsParams.redir!;
+    }
+  };
+
+  const handleRedirectAction = (url: string | null, isCampaign: boolean, campaignId?: string) => {
+    if (isCampaign && campaignId) {
+      sendVisitorEvent('CAMPAIGN_CLICK', {
+        campaign_id: campaignId,
+      });
+    }
+    if (isValidUrl(url) && typeof window !== 'undefined') {
+      window.location.href = url!;
+    } else if (isValidUrl(openNdsParams.redir) && typeof window !== 'undefined') {
+      window.location.href = openNdsParams.redir!;
+    }
+  };
+
+  const handleSlideView = async (slide: CarouselSlide) => {
+    if (slide.isCampaign && slide.campaign) {
+      setActivePromoCampaign(slide.campaign);
+    } else {
+      setActivePromoCampaign(null);
+    }
+
+    if (slide.isCampaign && slide.id) {
+      if (loggedImpressions.current.has(slide.id)) return;
+      loggedImpressions.current.add(slide.id);
+
+      try {
+        await fetch('/api/portal/events', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            event_type: 'CAMPAIGN_IMPRESSION',
+            campaign_id: slide.id,
+          }),
+        });
+      } catch (err) {
+        console.warn('Erro ao registrar impressão:', err);
+      }
+    }
+  };
+
+  const handleSlideClick = async (slide: CarouselSlide) => {
+    if (slide.isCampaign && slide.id) {
+      try {
+        await fetch('/api/portal/events', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            event_type: 'CAMPAIGN_CLICK',
+            campaign_id: slide.id,
+          }),
+        });
+      } catch (err) {
+        console.warn('Erro ao registrar clique:', err);
+      }
+
+      if (slide.buttonUrl) {
+        if (!isValidUrl(slide.buttonUrl)) return;
+        window.open(slide.buttonUrl, '_blank', 'noopener,noreferrer');
+      }
     }
   };
 
@@ -411,7 +573,7 @@ export function SuccessOffer({ settings, visitorId, visitorName, authUrl, openNd
     }, 1000);
 
     return () => clearInterval(timer);
-  }, [timeLeft, activePromoCampaign]);
+  }, [timeLeft]);
 
   const cancelRedirect = () => {
     setTimeLeft(null);
@@ -420,7 +582,6 @@ export function SuccessOffer({ settings, visitorId, visitorName, authUrl, openNd
 
   const primaryColor = settings.primary_color || '#2563eb';
 
-  // Renderiza tela de carregamento ou erro se no modo real
   if (isRealMode && (authState === 'AUTHORIZING' || authState === 'FAILED')) {
     return (
       <AuthorizationGate 
@@ -430,7 +591,6 @@ export function SuccessOffer({ settings, visitorId, visitorName, authUrl, openNd
     );
   }
 
-  // Mostra um loader curto enquanto carrega campanhas para evitar piscadas visuais (layout shift)
   if (loadingCampaigns && authState === 'AUTHORIZED') {
     return (
       <div className="w-full max-w-md bg-white/95 backdrop-blur-md text-slate-900 rounded-3xl shadow-2xl overflow-hidden border border-white/20 p-8 text-center space-y-4 animate-in fade-in">
@@ -468,65 +628,43 @@ export function SuccessOffer({ settings, visitorId, visitorName, authUrl, openNd
           </p>
         </div>
 
-        {/* CUPOM DINÂMICO E ESTÁTICO REMOVIDOS — sistema de oferta presencial */}
-
-        {/* PROMOÇÃO/BANNER DINÂMICA (PRIORITÁRIA) OU ESTÁTICA (FALLBACK) */}
-        {activePromoCampaign ? (
+        {/* Carousel de mídias inline na tela de sucesso */}
+        {hasActiveSlides && (
           <div className="w-full bg-slate-50 border border-slate-200 rounded-2xl overflow-hidden shadow-sm mt-4">
-            {activePromoCampaign.media_url && (
-              <div 
-                className="w-full bg-slate-100 relative overflow-hidden" 
-                style={{
-                  aspectRatio: activePromoCampaign.aspect_ratio === '9:16' ? '9/16' 
-                    : activePromoCampaign.aspect_ratio === '1:1' ? '1/1'
-                    : activePromoCampaign.aspect_ratio === '16:9' ? '16/9'
-                    : '4/5',
-                  maxHeight: '40vh'
-                }}
-              >
-                <img src={activePromoCampaign.media_url} alt="Promoção" className="w-full h-full object-cover" />
+            <div className="w-full relative overflow-hidden">
+              <MediaCarousel
+                slides={carouselSlides}
+                onSlideView={handleSlideView}
+                onSlideClick={handleSlideClick}
+                containerAspectRatio="16/9"
+              />
+            </div>
+            
+            {/* Renderizar detalhes do slide ativo */}
+            {activePromoCampaign ? (
+              <div className="p-4 text-left">
+                <h3 className="font-bold text-sm text-slate-900 mb-1">{activePromoCampaign.title}</h3>
+                {activePromoCampaign.description && <p className="text-xs text-slate-600 mb-3">{activePromoCampaign.description}</p>}
+                {activePromoCampaign.button_text && activePromoCampaign.button_url ? (
+                  <button 
+                    onClick={() => handleRedirectAction(activePromoCampaign.button_url, true, activePromoCampaign.id)}
+                    className="w-full py-2.5 rounded-lg bg-blue-50 hover:bg-blue-100 text-blue-700 text-xs font-bold transition-colors border border-blue-200"
+                  >
+                    {activePromoCampaign.button_text}
+                  </button>
+                ) : (
+                  <div className="w-full py-3 bg-amber-50 border border-amber-200 text-amber-800 rounded-xl text-xs font-semibold text-center">
+                    📋 Apresente esta tela ao atendente para receber a oferta.
+                  </div>
+                )}
               </div>
-            )}
-            
-            <div className="p-4 text-left">
-              <h3 className="font-bold text-sm text-slate-900 mb-1">{activePromoCampaign.title}</h3>
-              {activePromoCampaign.description && <p className="text-xs text-slate-600 mb-3">{activePromoCampaign.description}</p>}
-              {activePromoCampaign.button_text && activePromoCampaign.button_url ? (
-                <button 
-                  onClick={handleMarketingRedirect}
-                  className="w-full py-2.5 rounded-lg bg-blue-50 hover:bg-blue-100 text-blue-700 text-xs font-bold transition-colors border border-blue-200"
-                >
-                  {activePromoCampaign.button_text}
-                </button>
-              ) : (
-                <div className="w-full py-3 bg-amber-50 border border-amber-200 text-amber-800 rounded-xl text-xs font-semibold text-center">
-                  📋 Apresente esta tela ao atendente para receber a oferta.
-                </div>
-              )}
-            </div>
-          </div>
-        ) : settings.post_signup_action === 'PROMO' && settings.post_signup_promo_image_url ? (
-          <div className="w-full bg-slate-50 border border-slate-200 rounded-2xl overflow-hidden shadow-sm mt-4">
-            <div 
-              className="w-full bg-slate-100 relative overflow-hidden" 
-              style={{
-                aspectRatio: settings.post_signup_promo_image_aspect_ratio === '9:16' ? '9/16' 
-                  : settings.post_signup_promo_image_aspect_ratio === '1:1' ? '1/1'
-                  : settings.post_signup_promo_image_aspect_ratio === '16:9' ? '16/9'
-                  : '4/5',
-                maxHeight: '40vh'
-              }}
-            >
-              <img src={settings.post_signup_promo_image_url} alt="Promoção" className="w-full h-full object-cover" />
-            </div>
-            
-            {(settings.post_signup_promo_title || settings.post_signup_promo_description) && (
+            ) : hasPostSignupBannerConfig ? (
               <div className="p-4 text-left">
                 {settings.post_signup_promo_title && <h3 className="font-bold text-sm text-slate-900 mb-1">{settings.post_signup_promo_title}</h3>}
                 {settings.post_signup_promo_description && <p className="text-xs text-slate-600 mb-3">{settings.post_signup_promo_description}</p>}
                 {settings.post_signup_promo_button_text && settings.post_signup_promo_button_url ? (
                   <button 
-                    onClick={handleMarketingRedirect}
+                    onClick={() => handleRedirectAction(settings.post_signup_promo_button_url || null, false)}
                     className="w-full py-2.5 rounded-lg bg-blue-50 hover:bg-blue-100 text-blue-700 text-xs font-bold transition-colors border border-blue-200"
                   >
                     {settings.post_signup_promo_button_text}
@@ -537,9 +675,17 @@ export function SuccessOffer({ settings, visitorId, visitorName, authUrl, openNd
                   </div>
                 )}
               </div>
-            )}
+            ) : null}
           </div>
-        ) : null}
+        )}
+
+        {/* View all promos page link */}
+        <a 
+          href={`/portal/promocoes${urlParams}`}
+          className="w-full py-3.5 rounded-2xl font-bold text-sm bg-slate-900/5 hover:bg-slate-900/10 border border-slate-200 flex items-center justify-center gap-2 text-slate-800 transition-all text-center"
+        >
+          <Gift className="w-5 h-5 text-emerald-500" /> Ver Minhas Promoções
+        </a>
 
         <SecondaryActions settings={settings} visitorId={visitorId} />
 
@@ -555,11 +701,15 @@ export function SuccessOffer({ settings, visitorId, visitorName, authUrl, openNd
       <PromoBanner
         visible={bannerVisible}
         settings={settings}
-        activePromoCampaign={activePromoCampaign}
+        slides={slides}
+        carouselSlides={carouselSlides}
         timeLeft={timeLeft}
         primaryColor={primaryColor}
         onCancel={cancelRedirect}
-        onRedirect={handleMarketingRedirect}
+        onRedirect={handleRedirectAction}
+        onSlideView={handleSlideView}
+        onSlideClick={handleSlideClick}
+        activePromoCampaign={activePromoCampaign}
       />
     </>
   );

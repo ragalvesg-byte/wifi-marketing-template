@@ -38,7 +38,16 @@ export function PreviewMobile({ settings, step }: PreviewMobileProps) {
           {settings.pre_signup_show_banner && (
             <div className="w-full h-40 bg-black/40 rounded-2xl overflow-hidden mb-4 border border-white/10 shrink-0">
               {settings.landing_media_type === 'IMAGE' && settings.landing_media_url ? (
-                <img src={settings.landing_media_url} alt="Banner" className="w-full h-full object-cover" />
+                <img 
+                  src={settings.landing_media_url} 
+                  alt="Banner" 
+                  className="w-full h-full" 
+                  style={{
+                    objectPosition: `${settings.landing_media_position_x ?? 50}% ${settings.landing_media_position_y ?? 50}%`,
+                    objectFit: settings.landing_media_fit || 'cover',
+                    backgroundColor: settings.landing_media_fit === 'contain' ? '#0f172a' : 'transparent'
+                  }}
+                />
               ) : (
                 <div className="w-full h-full flex items-center justify-center text-white/50 text-xs">Mídia</div>
               )}
@@ -174,7 +183,16 @@ export function PreviewMobile({ settings, step }: PreviewMobileProps) {
                   maxHeight: '40vh'
                 }}
               >
-                <img src={settings.post_signup_promo_image_url} alt="Promo" className="w-full h-full object-cover" />
+                <img 
+                  src={settings.post_signup_promo_image_url} 
+                  alt="Promo" 
+                  className="w-full h-full" 
+                  style={{
+                    objectPosition: `${settings.post_signup_media_position_x ?? 50}% ${settings.post_signup_media_position_y ?? 50}%`,
+                    objectFit: settings.post_signup_media_fit || 'cover',
+                    backgroundColor: settings.post_signup_media_fit === 'contain' ? '#0f172a' : 'transparent'
+                  }}
+                />
               </div>
               
               {(settings.post_signup_promo_title || settings.post_signup_promo_description) && (
@@ -253,7 +271,16 @@ export function PreviewMobile({ settings, step }: PreviewMobileProps) {
                   maxHeight: '50vh'
                 }}
               >
-                <img src={settings.post_signup_promo_image_url} alt="Banner" className="w-full h-full object-cover" />
+                <img 
+                  src={settings.post_signup_promo_image_url} 
+                  alt="Banner" 
+                  className="w-full h-full" 
+                  style={{
+                    objectPosition: `${settings.post_signup_media_position_x ?? 50}% ${settings.post_signup_media_position_y ?? 50}%`,
+                    objectFit: settings.post_signup_media_fit || 'cover',
+                    backgroundColor: settings.post_signup_media_fit === 'contain' ? '#0f172a' : 'transparent'
+                  }}
+                />
               </div>
             ) : (
               <div className="w-full h-32 bg-gradient-to-br from-blue-500 to-purple-600 flex items-center justify-center p-6">

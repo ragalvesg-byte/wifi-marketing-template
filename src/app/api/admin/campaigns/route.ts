@@ -102,11 +102,22 @@ export async function POST(request: Request) {
       button_url,
       start_date,
       end_date,
+      media_position_x = 50,
+      media_position_y = 50,
+      media_fit = 'cover',
       // Target
       target_type = 'ALL',
       rules = {},
       // Campos legados de cupom são ignorados silenciosamente
     } = body;
+
+    if (media_position_x < 0 || media_position_x > 100 || media_position_y < 0 || media_position_y > 100) {
+      return NextResponse.json({ error: 'Os valores de posicionamento X e Y devem estar entre 0 e 100.' }, { status: 400 });
+    }
+
+    if (!['cover', 'contain'].includes(media_fit)) {
+      return NextResponse.json({ error: 'O enquadramento deve ser cover ou contain.' }, { status: 400 });
+    }
 
     if (!title || !type) {
       return NextResponse.json({ error: 'Título e tipo de campanha são obrigatórios.' }, { status: 400 });
@@ -131,6 +142,9 @@ export async function POST(request: Request) {
         button_url,
         start_date,
         end_date,
+        media_position_x,
+        media_position_y,
+        media_fit,
         created_at: new Date().toISOString(),
         updated_at: new Date().toISOString(),
         campaign_audiences: [
@@ -168,6 +182,9 @@ export async function POST(request: Request) {
         button_url: button_url || null,
         start_date: start_date || null,
         end_date: end_date || null,
+        media_position_x,
+        media_position_y,
+        media_fit,
       })
       .select()
       .single();
@@ -258,11 +275,25 @@ export async function PUT(request: Request) {
       button_url,
       start_date,
       end_date,
+      media_position_x,
+      media_position_y,
+      media_fit,
       // Target
       target_type = 'ALL',
       rules = {},
       // Campos legados de cupom são ignorados silenciosamente
     } = body;
+
+    const positionX = media_position_x ?? 50;
+    const positionY = media_position_y ?? 50;
+    const fit = media_fit || 'cover';
+
+    if (positionX < 0 || positionX > 100 || positionY < 0 || positionY > 100) {
+      return NextResponse.json({ error: 'Os valores de posicionamento X e Y devem estar entre 0 e 100.' }, { status: 400 });
+    }
+    if (!['cover', 'contain'].includes(fit)) {
+      return NextResponse.json({ error: 'O enquadramento deve ser cover ou contain.' }, { status: 400 });
+    }
 
     if (!id) {
       return NextResponse.json({ error: 'ID da campanha é obrigatório para edição.' }, { status: 400 });
@@ -295,6 +326,9 @@ export async function PUT(request: Request) {
         button_url,
         start_date,
         end_date,
+        media_position_x: positionX,
+        media_position_y: positionY,
+        media_fit: fit,
         updated_at: new Date().toISOString(),
         campaign_audiences: [
           {
@@ -352,6 +386,9 @@ export async function PUT(request: Request) {
             button_url: prevCampaign.button_url,
             start_date: prevCampaign.start_date,
             end_date: prevCampaign.end_date,
+            media_position_x: prevCampaign.media_position_x,
+            media_position_y: prevCampaign.media_position_y,
+            media_fit: prevCampaign.media_fit,
             updated_at: prevCampaign.updated_at,
           })
           .eq('id', id);
@@ -390,6 +427,9 @@ export async function PUT(request: Request) {
         button_url: button_url || null,
         start_date: start_date || null,
         end_date: end_date || null,
+        media_position_x: positionX,
+        media_position_y: positionY,
+        media_fit: fit,
         updated_at: new Date().toISOString(),
       })
       .eq('id', id);

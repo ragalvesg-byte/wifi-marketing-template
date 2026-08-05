@@ -135,6 +135,25 @@ export function PreSignupSettings({ settings, setSettings }: SettingsTabProps) {
                       onChange={(url) => setSettings({ ...settings, landing_media_url: url })}
                     />
                   </div>
+                  {settings.landing_media_url && settings.landing_media_type === 'IMAGE' && (
+                    <div className="md:col-span-2 p-4 bg-slate-50 rounded-2xl border border-slate-200/60 grid grid-cols-1 md:grid-cols-3 gap-4 mt-2 text-slate-900">
+                      <div>
+                        <label className="block text-xs font-semibold uppercase text-slate-600 mb-1">Enquadramento</label>
+                        <select value={settings.landing_media_fit || 'cover'} onChange={(e) => setSettings({ ...settings, landing_media_fit: e.target.value as any })} className="w-full px-4 py-2.5 rounded-xl border border-slate-200 text-sm font-semibold">
+                          <option value="cover">Corte (Cover)</option>
+                          <option value="contain">Inteiro (Contain)</option>
+                        </select>
+                      </div>
+                      <div>
+                        <label className="block text-xs font-semibold uppercase text-slate-600 mb-1">Posição Horizontal: {settings.landing_media_position_x ?? 50}%</label>
+                        <input type="range" min="0" max="100" value={settings.landing_media_position_x ?? 50} onChange={(e) => setSettings({ ...settings, landing_media_position_x: parseInt(e.target.value) })} className="w-full h-2 bg-slate-200 rounded-lg appearance-none cursor-pointer mt-3" />
+                      </div>
+                      <div>
+                        <label className="block text-xs font-semibold uppercase text-slate-600 mb-1">Posição Vertical: {settings.landing_media_position_y ?? 50}%</label>
+                        <input type="range" min="0" max="100" value={settings.landing_media_position_y ?? 50} onChange={(e) => setSettings({ ...settings, landing_media_position_y: parseInt(e.target.value) })} className="w-full h-2 bg-slate-200 rounded-lg appearance-none cursor-pointer mt-3" />
+                      </div>
+                    </div>
+                  )}
                 </>
               )}
 
@@ -322,6 +341,25 @@ export function PostSignupSettings({ settings, setSettings }: SettingsTabProps) 
                     onChange={(url) => setSettings({ ...settings, post_signup_promo_image_url: url })}
                   />
                 </div>
+                {settings.post_signup_promo_image_url && (
+                  <div className="md:col-span-2 p-4 bg-slate-50 rounded-2xl border border-slate-200/60 grid grid-cols-1 md:grid-cols-3 gap-4 mt-2 text-slate-900">
+                    <div>
+                      <label className="block text-xs font-semibold uppercase text-slate-600 mb-1">Enquadramento</label>
+                      <select value={settings.post_signup_media_fit || 'cover'} onChange={(e) => setSettings({ ...settings, post_signup_media_fit: e.target.value as any })} className="w-full px-4 py-2.5 rounded-xl border border-slate-200 text-sm font-semibold">
+                        <option value="cover">Corte (Cover)</option>
+                        <option value="contain">Inteiro (Contain)</option>
+                      </select>
+                    </div>
+                    <div>
+                      <label className="block text-xs font-semibold uppercase text-slate-600 mb-1">Posição Horizontal: {settings.post_signup_media_position_x ?? 50}%</label>
+                      <input type="range" min="0" max="100" value={settings.post_signup_media_position_x ?? 50} onChange={(e) => setSettings({ ...settings, post_signup_media_position_x: parseInt(e.target.value) })} className="w-full h-2 bg-slate-200 rounded-lg appearance-none cursor-pointer mt-3" />
+                    </div>
+                    <div>
+                      <label className="block text-xs font-semibold uppercase text-slate-600 mb-1">Posição Vertical: {settings.post_signup_media_position_y ?? 50}%</label>
+                      <input type="range" min="0" max="100" value={settings.post_signup_media_position_y ?? 50} onChange={(e) => setSettings({ ...settings, post_signup_media_position_y: parseInt(e.target.value) })} className="w-full h-2 bg-slate-200 rounded-lg appearance-none cursor-pointer mt-3" />
+                    </div>
+                  </div>
+                )}
                 <div>
                   <label className="block text-xs font-semibold uppercase text-slate-600 mb-1">Formato da Imagem</label>
                   <select value={settings.post_signup_promo_image_aspect_ratio || '4:5'} onChange={(e) => setSettings({ ...settings, post_signup_promo_image_aspect_ratio: e.target.value as any })} className="w-full px-4 py-2.5 rounded-xl border border-slate-200 text-sm font-semibold">
