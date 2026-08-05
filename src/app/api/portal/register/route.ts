@@ -5,6 +5,7 @@ import { cleanPhoneNumber } from '@/lib/utils';
 import { getRouterDriver } from '@/lib/routers';
 import { isValidMac, isValidIp, sanitizeToken } from '@/lib/opennds';
 import { RegisterVisitorPayload } from '@/types/database';
+import { MOCK_STORE_SETTINGS } from '@/lib/supabase/mock-data';
 
 const rateLimitMap = new Map<string, { count: number; resetAt: number }>();
 
@@ -142,6 +143,49 @@ export async function POST(request: Request) {
     cleanPhone = finalPhone;
     body.name = finalName;
 
+    // Buscar configurações de campos dinâmicos do formulário
+    let fieldSettings = {
+      field_email_enabled: false,
+      field_dob_enabled: false,
+      field_city_enabled: false,
+      field_gender_enabled: false,
+      field_email_required: false,
+      field_dob_required: false,
+      field_city_required: false,
+      field_gender_required: false,
+    };
+
+    if (supabase) {
+      try {
+        const { data: dbSettings } = await supabase
+          .from('store_settings')
+          .select('field_email_enabled, field_dob_enabled, field_city_enabled, field_gender_enabled, field_email_required, field_dob_required, field_city_required, field_gender_required')
+          .limit(1)
+          .single();
+        if (dbSettings) {
+          fieldSettings = dbSettings;
+        }
+      } catch (err) {
+        console.warn('Erro ao carregar configurações de campos do formulário:', err);
+      }
+    } else {
+      fieldSettings = MOCK_STORE_SETTINGS as any;
+    }
+
+    // Validar campos ativados e obrigatórios no backend (Segurança)
+    if (fieldSettings.field_email_enabled && fieldSettings.field_email_required && (!body.email || !body.email.trim())) {
+      return NextResponse.json({ error: 'O preenchimento do e-mail é obrigatório.' }, { status: 400 });
+    }
+    if (fieldSettings.field_dob_enabled && fieldSettings.field_dob_required && !body.date_of_birth) {
+      return NextResponse.json({ error: 'A data de nascimento é obrigatória.' }, { status: 400 });
+    }
+    if (fieldSettings.field_city_enabled && fieldSettings.field_city_required && (!body.city || !body.city.trim())) {
+      return NextResponse.json({ error: 'O preenchimento da cidade é obrigatório.' }, { status: 400 });
+    }
+    if (fieldSettings.field_gender_enabled && fieldSettings.field_gender_required && !body.gender) {
+      return NextResponse.json({ error: 'A seleção do gênero é obrigatória.' }, { status: 400 });
+    }
+
 
 
     const rawMac = body.mac_address;
@@ -168,10 +212,10 @@ export async function POST(request: Request) {
           .from('visitors')
           .update({
             name: body.name.trim(),
-            email: body.email || existingVisitor.email,
-            date_of_birth: body.date_of_birth || existingVisitor.date_of_birth,
-            city: body.city || existingVisitor.city,
-            gender: body.gender || existingVisitor.gender,
+            email: fieldSettings.field_email_enabled ? (body.email || existingVisitor.email) : existingVisitor.email,
+            date_of_birth: fieldSettings.field_dob_enabled ? (body.date_of_birth || existingVisitor.date_of_birth) : existingVisitor.date_of_birth,
+            city: fieldSettings.field_city_enabled ? (body.city || existingVisitor.city) : existingVisitor.city,
+            gender: fieldSettings.field_gender_enabled ? (body.gender || existingVisitor.gender) : existingVisitor.gender,
             total_visits: totalVisits,
             last_seen_at: new Date().toISOString(),
           })
@@ -183,10 +227,10 @@ export async function POST(request: Request) {
           .insert({
             phone: cleanPhone,
             name: body.name.trim(),
-            email: body.email || null,
-            date_of_birth: body.date_of_birth || null,
-            city: body.city || null,
-            gender: body.gender || null,
+            email: fieldSettings.field_email_enabled ? (body.email || null) : null,
+            date_of_birth: fieldSettings.field_dob_enabled ? (body.date_of_birth || null) : null,
+            city: fieldSettings.field_city_enabled ? (body.city || null) : null,
+            gender: fieldSettings.field_gender_enabled ? (body.gender || null) : null,
             terms_accepted: true,
             total_visits: 1,
           })

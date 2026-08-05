@@ -27,6 +27,9 @@ export interface StoreSettings {
   landing_media_url?: string;
   featured_promo_title?: string;
   featured_promo_description?: string;
+  landing_media_position_x?: number;
+  landing_media_position_y?: number;
+  landing_media_fit?: 'cover' | 'contain';
 
   // Links Sociais e Utilitários
   instagram_url?: string;
@@ -72,6 +75,9 @@ export interface StoreSettings {
   post_signup_promo_image_aspect_ratio?: '9:16' | '4:5' | '1:1' | '16:9';
   post_signup_redirect_mode?: 'NONE' | 'AUTO_3S' | 'AUTO_5S' | 'AUTO_10S' | 'ON_CLICK';
   post_signup_redirect_seconds?: number;
+  post_signup_media_position_x?: number;
+  post_signup_media_position_y?: number;
+  post_signup_media_fit?: 'cover' | 'contain';
   /** @legacy Campo mantido para compatibilidade. O portal ignora este campo. */
   post_signup_show_coupon?: boolean;
   post_signup_show_instagram?: boolean;
@@ -174,6 +180,8 @@ export type VisitorEventType =
   | 'GOOGLE_REVIEW_CLICKED'
   | 'CAMPAIGN_VIEWED'
   | 'CAMPAIGN_CLICKED'
+  | 'CAMPAIGN_IMPRESSION'
+  | 'CAMPAIGN_CLICK'
   | 'COUPON_COPIED'   // @legacy — não gerar novos eventos deste tipo
   | 'COUPON_REDEEMED'; // @legacy — não gerar novos eventos deste tipo
 
@@ -202,6 +210,9 @@ export interface Campaign {
   button_url?: string | null;
   start_date?: string | null;
   end_date?: string | null;
+  media_position_x?: number;
+  media_position_y?: number;
+  media_fit?: 'cover' | 'contain';
   created_at?: string;
   updated_at?: string;
 }

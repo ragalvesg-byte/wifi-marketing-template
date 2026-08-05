@@ -44,15 +44,29 @@ export async function GET(request: Request) {
           aspect_ratio: '1:1',
           button_text: 'Ver no Cardápio',
           button_url: 'https://exemplo.com/cardapio',
+        },
+        {
+          id: 'campaign-3',
+          title: 'Campanha Geral',
+          description: 'Válida para todos os clientes.',
+          type: 'PROMO',
+          status: 'ACTIVE',
+          media_url: 'https://images.unsplash.com/photo-1501339847302-ac426a4a7cbb',
+          media_type: 'IMAGE',
+          aspect_ratio: '16:9',
+          button_text: 'Ver Site',
+          button_url: 'https://exemplo.com',
         }
       ];
 
       // Filtro básico na demonstração
       let matched = [...mockActiveCampaigns];
-      if (visitorId === 'visitor-new') {
-        matched = [mockActiveCampaigns[0]]; // apenas a de boas-vindas
+      if (!visitorId || visitorId === 'null' || visitorId === 'undefined') {
+        matched = [mockActiveCampaigns[2]]; // Sem visitante identificado, retorna apenas a geral
+      } else if (visitorId === 'visitor-new') {
+        matched = [mockActiveCampaigns[0], mockActiveCampaigns[2]]; // boas-vindas + geral
       } else if (visitorId === 'visitor-bday') {
-        matched = [mockActiveCampaigns[1]]; // apenas a de aniversário
+        matched = [mockActiveCampaigns[1], mockActiveCampaigns[2]]; // aniversário + geral
       }
 
       return NextResponse.json({ campaigns: matched, isDemo: true });
@@ -107,6 +121,11 @@ export async function GET(request: Request) {
       if (!audience) return true; // Sem segmentação explícita = exibe para todos
 
       const { target_type, rules = {} } = audience;
+
+      // Se o visitante não estiver identificado, só exibe campanhas gerais (ALL)
+      if (!visitor) {
+        return target_type === 'ALL';
+      }
 
       switch (target_type) {
         case 'ALL':
