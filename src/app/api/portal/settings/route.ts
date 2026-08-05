@@ -2,6 +2,9 @@ import { NextResponse } from 'next/server';
 import { createAdminClient } from '@/lib/supabase/admin';
 import { MOCK_STORE_SETTINGS, NEUTRAL_STORE_SETTINGS } from '@/lib/supabase/mock-data';
 
+export const dynamic = 'force-dynamic';
+export const revalidate = 0;
+
 const ALLOWED_SETTING_FIELDS = [
   'id',
   'store_name',
@@ -53,7 +56,13 @@ const ALLOWED_SETTING_FIELDS = [
   'post_signup_promo_button_url',
   'post_signup_promo_image_aspect_ratio',
   'post_signup_banner_enabled',
-  'post_signup_banner_closable'
+  'post_signup_banner_closable',
+  'landing_media_position_x',
+  'landing_media_position_y',
+  'landing_media_fit',
+  'post_signup_media_position_x',
+  'post_signup_media_position_y',
+  'post_signup_media_fit'
 ];
 
 function filterPublicSettings(settings: any) {
@@ -68,11 +77,17 @@ function filterPublicSettings(settings: any) {
 }
 
 export async function GET() {
+  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
+  const supabaseServiceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
+
+  console.log(`SUPABASE_URL definida: ${supabaseUrl ? 'sim' : 'não'}`);
+  console.log(`SERVICE_ROLE definida: ${supabaseServiceRoleKey ? 'sim' : 'não'}`);
+
   let supabase;
   try {
     supabase = createAdminClient();
-  } catch (e) {
-    console.warn('Rodando settings em modo demonstração: ', e);
+  } catch (e: any) {
+    console.error('Falha de inicialização do Supabase Admin:', e?.message || e);
   }
 
   if (!supabase) {
@@ -91,20 +106,37 @@ export async function GET() {
       .single();
 
     if (error || !settings) {
-      console.error('Falha ao buscar configurações da loja em produção (erro ou vazio):', error);
-      return NextResponse.json({ 
-        settings: filterPublicSettings(NEUTRAL_STORE_SETTINGS), 
-        isDemo: false 
-      });
+      const errMsg = error ? `${error.message} / ${error.code}` : 'Nenhum registro retornado';
+      console.error(`erro da consulta: ${errMsg}`);
+
+      let countVal = 0;
+      try {
+        const { count } = await supabase
+          .from('store_settings')
+          .select('*', { count: 'exact', head: true });
+        countVal = count ?? 0;
+      } catch (countErr) {
+        // Silently ignore counting errors
+      }
+      console.error(`quantidade de registros encontrados: ${countVal}`);
+
+      return NextResponse.json(
+        { error: 'Erro interno ao buscar as configurações.' },
+        { status: 500 }
+      );
     }
 
+    console.log(`erro da consulta: nenhum`);
+    console.log(`quantidade de registros encontrados: 1`);
+
     return NextResponse.json({ settings: filterPublicSettings(settings), isDemo: false });
-  } catch (err) {
-    console.error('Falha de conexão ao buscar configurações da loja em produção:', err);
-    return NextResponse.json({ 
-      settings: filterPublicSettings(NEUTRAL_STORE_SETTINGS), 
-      isDemo: false 
-    });
+  } catch (err: any) {
+    const errMsg = err?.message || err;
+    console.error(`erro da consulta: ${errMsg}`);
+    return NextResponse.json(
+      { error: 'Erro interno ao buscar as configurações.' },
+      { status: 500 }
+    );
   }
 }
 
