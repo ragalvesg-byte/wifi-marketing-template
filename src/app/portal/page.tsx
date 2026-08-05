@@ -17,6 +17,7 @@ interface PortalPageProps {
 
 export default function PortalPage({ searchParams }: PortalPageProps) {
   const resolvedParams = use(searchParams);
+  const openNdsParamsObj = React.useMemo(() => parseOpenNdsParams(resolvedParams), [JSON.stringify(resolvedParams)]);
   const [openNdsParams, setOpenNdsParams] = useState<OpenNdsParams>({});
   const [settings, setSettings] = useState<StoreSettings>(NEUTRAL_STORE_SETTINGS);
   const [knownVisitor, setKnownVisitor] = useState<Visitor | null>(null);
@@ -37,8 +38,7 @@ export default function PortalPage({ searchParams }: PortalPageProps) {
   });
 
   useEffect(() => {
-    const params = parseOpenNdsParams(resolvedParams);
-    setOpenNdsParams(params);
+    setOpenNdsParams(openNdsParamsObj);
 
     // Dispara evento PORTAL_VIEWED de forma assíncrona
     sendVisitorEvent('PORTAL_VIEWED');
@@ -64,9 +64,9 @@ export default function PortalPage({ searchParams }: PortalPageProps) {
       }
 
       // 2. Verificar se o visitante é conhecido pelo MAC ou Cookie
-      if (params.clientmac) {
+      if (openNdsParamsObj.clientmac) {
         try {
-          const res = await fetch(`/api/portal/check-mac?mac=${encodeURIComponent(params.clientmac)}`);
+          const res = await fetch(`/api/portal/check-mac?mac=${encodeURIComponent(openNdsParamsObj.clientmac)}`);
           if (res.ok) {
             const data = await res.json();
             if (data.found && data.visitor && !data.needsRelogin) {
@@ -75,7 +75,6 @@ export default function PortalPage({ searchParams }: PortalPageProps) {
               setCheckingMac(false);
               // Registrar VISITOR_RETURNED somente quando o visitante for efetivamente reconhecido
               sendVisitorEvent('VISITOR_RETURNED', {
-                visitor_id: data.visitor.id,
                 metadata: {
                   method: 'mac_check',
                   total_visits: data.visitor.total_visits,
@@ -100,7 +99,7 @@ export default function PortalPage({ searchParams }: PortalPageProps) {
     };
 
     checkDeviceAndSettings();
-  }, [resolvedParams]);
+  }, [openNdsParamsObj]);
 
   const handleSuccess = (data: { visitorId?: string | null; visitorName: string; authUrl: string; totalVisits: number }) => {
     setSuccessData(data);
@@ -109,7 +108,7 @@ export default function PortalPage({ searchParams }: PortalPageProps) {
 
   return (
     <main
-      className="min-h-screen w-full relative flex items-center justify-center p-4 bg-cover bg-center bg-no-repeat"
+      className="min-h-screen w-full relative flex flex-col items-center justify-start sm:justify-center p-4 overflow-y-auto bg-cover bg-center bg-no-repeat"
       style={{
         backgroundImage: `linear-gradient(to bottom, rgba(15, 23, 42, 0.75), rgba(15, 23, 42, 0.85)), url('${settings.background_url}')`,
       }}

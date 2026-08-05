@@ -1,4 +1,5 @@
 import { NextResponse } from 'next/server';
+import { cookies } from 'next/headers';
 import { createAdminClient } from '@/lib/supabase/admin';
 import { VisitorEventType } from '@/types/database';
 
@@ -36,7 +37,8 @@ export async function POST(request: Request) {
 
     // 2. Parse body
     const body = await request.json();
-    const { event_type, visitor_id, wifi_session_id, campaign_id, anonymous_session_id, metadata } = body;
+    // SEGURANÇA: visitor_id NUNCA vem do body — é resolvido exclusivamente pelo cookie httpOnly do servidor
+    const { event_type, wifi_session_id, campaign_id, anonymous_session_id, metadata } = body;
 
     // 3. Validação do event_type
     if (!event_type || !ALLOWED_EVENTS.has(event_type as VisitorEventType)) {
@@ -72,10 +74,34 @@ export async function POST(request: Request) {
       console.warn('Erro ao criar cliente Supabase Admin para eventos (modo demonstração):', e);
     }
 
+    // SEGURANÇA: resolver visitor_id exclusivamente pelo cookie httpOnly do servidor
+    // O cookie contém o UUID do visitor, mas deve ser validado contra o banco
+    let resolvedVisitorId: string | null = null;
+    if (supabase) {
+      try {
+        const cookieStore = await cookies();
+        const deviceCookieToken = cookieStore.get('wifi_visitor_device_token')?.value;
+        if (deviceCookieToken) {
+          // Validação obrigatória: confirmar que o token corresponde a um visitor real
+          const { data: visitorRecord } = await supabase
+            .from('visitors')
+            .select('id')
+            .eq('id', deviceCookieToken)
+            .maybeSingle();
+          if (visitorRecord) {
+            resolvedVisitorId = visitorRecord.id;
+          }
+          // Se o cookie não corresponde a um visitor existente, é ignorado (token inválido/adulterado)
+        }
+      } catch (err) {
+        // Ignorado no escopo de testes — eventos anônimos são aceitos
+      }
+    }
+
     if (supabase) {
       const { error } = await supabase.from('visitor_events').insert({
         event_type,
-        visitor_id: visitor_id || null,
+        visitor_id: resolvedVisitorId,
         wifi_session_id: wifi_session_id || null,
         campaign_id: campaign_id || null,
         anonymous_session_id: anonymous_session_id || null,
@@ -89,7 +115,7 @@ export async function POST(request: Request) {
     } else {
       console.log('[Demo Mode Event Logged]:', {
         event_type,
-        visitor_id,
+        visitor_id: resolvedVisitorId,
         wifi_session_id,
         campaign_id,
         anonymous_session_id,

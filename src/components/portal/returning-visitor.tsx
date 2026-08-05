@@ -70,7 +70,7 @@ export function ReturningVisitor({ settings, visitor, openNdsParams, onSuccess }
 
       <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-amber-50 text-amber-700 text-xs font-semibold mb-3 border border-amber-200">
         <Sparkles className="w-3.5 h-3.5" />
-        Cliente Frequente — {visitor.total_visits}ª visita!
+        {visitor.total_visits ? `Cliente Frequente — ${visitor.total_visits}ª visita!` : 'Cliente Reconhecido'}
       </div>
 
       <h1 className="text-2xl font-extrabold text-slate-900 tracking-tight">

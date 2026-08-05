@@ -1,8 +1,15 @@
 import { NextResponse } from 'next/server';
 import { cookies } from 'next/headers';
-import { createServerClientInstance } from '@/lib/supabase/server';
+import { createAdminClient } from '@/lib/supabase/admin';
 import { isValidMac } from '@/lib/opennds';
 import { MOCK_DEVICES, MOCK_VISITORS, MOCK_STORE_SETTINGS } from '@/lib/supabase/mock-data';
+
+function filterPublicVisitor(visitor: any) {
+  if (!visitor) return null;
+  return {
+    name: visitor.name
+  };
+}
 
 export async function GET(request: Request) {
   const { searchParams } = new URL(request.url);
@@ -13,7 +20,12 @@ export async function GET(request: Request) {
   const cookieStore = await cookies();
   const deviceCookieToken = cookieStore.get('wifi_visitor_device_token')?.value;
 
-  const supabase = await createServerClientInstance();
+  let supabase;
+  try {
+    supabase = createAdminClient();
+  } catch (e) {
+    console.warn('Rodando check-mac em modo demonstração: ', e);
+  }
 
   // MODO DEMONSTRAÇÃO (Supabase não configurado)
   if (!supabase) {
@@ -37,7 +49,7 @@ export async function GET(request: Request) {
 
       return NextResponse.json({
         found: true,
-        visitor: mockVisitor,
+        visitor: filterPublicVisitor(mockVisitor),
         needsRelogin,
         isDemo: true,
         identifiedBy: deviceCookieToken ? 'cookie_token' : 'mac_address',
@@ -47,7 +59,7 @@ export async function GET(request: Request) {
     return NextResponse.json({ found: false, needsRelogin: true, isDemo: true });
   }
 
-  // MODO REAL SUPABASE
+  // MODO REAL SUPABASE (Exclusivamente no servidor com service_role)
   try {
     let visitorData = null;
     let identifiedBy = null;
@@ -56,7 +68,7 @@ export async function GET(request: Request) {
     if (deviceCookieToken) {
       const { data: visitorByCookie } = await supabase
         .from('visitors')
-        .select('*')
+        .select('id, name, last_seen_at')
         .eq('id', deviceCookieToken)
         .single();
 
@@ -70,13 +82,17 @@ export async function GET(request: Request) {
     if (!visitorData && mac) {
       const { data: device } = await supabase
         .from('devices')
-        .select('*, visitors(*)')
+        .select('visitor_id, visitors(id, name, last_seen_at)')
         .eq('mac_address', mac)
         .single();
 
       if (device && device.visitors) {
-        visitorData = device.visitors;
-        identifiedBy = 'mac_address';
+        // O Supabase JS typings de sub-tabelas retornam como array ou objeto simples dependendo do relacionamento
+        const relatedVisitor = Array.isArray(device.visitors) ? device.visitors[0] : device.visitors;
+        if (relatedVisitor) {
+          visitorData = relatedVisitor;
+          identifiedBy = 'mac_address';
+        }
       }
     }
 
@@ -97,12 +113,14 @@ export async function GET(request: Request) {
 
     return NextResponse.json({
       found: true,
-      visitor: visitorData,
+      visitor: filterPublicVisitor(visitorData),
       needsRelogin,
       isDemo: false,
       identifiedBy,
     });
-  } catch {
+  } catch (err) {
+    console.error('Erro na rota check-mac:', err);
     return NextResponse.json({ found: false, needsRelogin: true, isDemo: false });
   }
 }
+

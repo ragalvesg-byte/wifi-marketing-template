@@ -15,8 +15,8 @@ Este relatório documenta a execução da implantação comercial do **Wi-Fi Mar
 - **Migrações:** O esquema completo (`store_settings`, `visitors`, `devices`, `wifi_sessions`) foi aplicado com sucesso.
 - **Políticas RLS:** Ativadas e configuradas para segurança da LGPD.
 - **Usuário Administrador Criado:**
-  - **Login:** `admin@sualoja.com.br`
-  - **Senha:** `admin123`
+  - **Login:** *(credenciais gerenciadas exclusivamente pelo painel Supabase Authentication)*
+  - **Senha:** *(redefinida — gerenciada pelo painel Supabase)*
 
 ## ✅ 3. Variáveis de Ambiente
 - **Status:** CONCLUÍDO
