@@ -25,6 +25,7 @@ export default function PortalPage({ searchParams }: PortalPageProps) {
 
   // Estado de fluxo da tela
   const [step, setStep] = useState<'LANDING' | 'FORM' | 'RETURNING' | 'SUCCESS'>('LANDING');
+  const [formIntent, setFormIntent] = useState<'DEFAULT' | 'PROMOTIONS' | 'WIFI'>('DEFAULT');
   const [successData, setSuccessData] = useState<{
     visitorId?: string | null;
     visitorName: string;
@@ -101,8 +102,12 @@ export default function PortalPage({ searchParams }: PortalPageProps) {
     checkDeviceAndSettings();
   }, [openNdsParamsObj]);
 
-  const handleSuccess = (data: { visitorId?: string | null; visitorName: string; authUrl: string; totalVisits: number }) => {
+  const handleSuccess = (data: { visitorId?: string | null; visitorName: string; authUrl: string; totalVisits: number; nextAction?: string }) => {
     setSuccessData(data);
+    if (formIntent === 'PROMOTIONS') {
+      window.location.href = `/portal/promocoes${window.location.search}`;
+      return;
+    }
     setStep('SUCCESS');
   };
 
@@ -135,13 +140,18 @@ export default function PortalPage({ searchParams }: PortalPageProps) {
         />
       ) : step === 'LANDING' ? (
         <LandingPage 
-          settings={settings} 
-          onContinue={() => setStep('FORM')} 
+          settings={settings}
+          isIdentified={Boolean(knownVisitor)}
+          onContinue={(intent) => {
+            setFormIntent(intent || 'DEFAULT');
+            setStep('FORM');
+          }} 
         />
       ) : (
         <VisitorForm
           settings={settings}
           openNdsParams={openNdsParams}
+          intent={formIntent}
           onSuccess={handleSuccess}
           onBack={settings.pre_signup_enabled !== false ? () => setStep('LANDING') : undefined}
         />

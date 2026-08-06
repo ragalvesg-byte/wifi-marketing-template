@@ -91,6 +91,17 @@ export interface StoreSettings {
   promotions_button_enabled?: boolean;
   promotions_carousel_enabled?: boolean;
 
+  // Configurações do Wi-Fi para Clientes
+  customer_wifi_enabled?: boolean;
+  wifi_network_name?: string;
+  wifi_network_password?: string;
+  wifi_password_visible?: boolean;
+  wifi_password_copy_enabled?: boolean;
+  wifi_section_title?: string;
+  wifi_instruction_text?: string;
+  wifi_android_instructions?: string;
+  wifi_ios_instructions?: string;
+
   // Regras de Recadastro e Termos
   relogin_days_interval: number;
   terms_of_service: string;
@@ -109,6 +120,8 @@ export interface Visitor {
   gender?: string | null;
   terms_accepted: boolean;
   terms_accepted_at: string;
+  marketing_consent?: boolean;
+  marketing_consent_at?: string | null;
   total_visits: number;
   first_seen_at: string;
   last_seen_at: string;
@@ -156,6 +169,8 @@ export interface RegisterVisitorPayload {
   date_of_birth?: string;
   city?: string;
   gender?: string;
+  terms_accepted?: boolean;
+  marketing_consent?: boolean;
   mac_address?: string;
   tok?: string;
   ip_address?: string;

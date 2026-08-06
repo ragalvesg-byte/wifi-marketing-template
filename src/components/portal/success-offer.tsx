@@ -569,6 +569,64 @@ export function SuccessOffer({ settings, visitorId, visitorName, authUrl, openNd
     setBannerVisible(false);
   }, []);
 
+  const [wifiModalOpen, setWifiModalOpen] = useState(false);
+  const [wifiData, setWifiData] = useState<{
+    networkName: string;
+    password: string | null;
+    passwordCopyEnabled: boolean;
+    sectionTitle: string;
+    instructionText: string;
+    androidInstructions: string;
+    iosInstructions: string;
+  } | null>(null);
+  const [loadingWifi, setLoadingWifi] = useState(false);
+  const [copiedPass, setCopiedPass] = useState(false);
+  const [showPassText, setShowPassText] = useState(false);
+
+  const loadWifiCredentials = useCallback(async () => {
+    setLoadingWifi(true);
+    try {
+      const res = await fetch('/api/portal/wifi-credentials');
+      if (res.ok) {
+        const data = await res.json();
+        setWifiData(data);
+      }
+    } catch (err) {
+      console.warn('Erro ao buscar credenciais do Wi-Fi:', err);
+    } finally {
+      setLoadingWifi(false);
+    }
+  }, []);
+
+  const handleOpenWifiModal = () => {
+    setWifiModalOpen(true);
+    if (!wifiData) {
+      loadWifiCredentials();
+    }
+  };
+
+  const handleCopyPassword = (pwd: string) => {
+    if (navigator.clipboard && navigator.clipboard.writeText) {
+      navigator.clipboard.writeText(pwd).catch(() => {
+        const ta = document.createElement('textarea');
+        ta.value = pwd;
+        document.body.appendChild(ta);
+        ta.select();
+        document.execCommand('copy');
+        document.body.removeChild(ta);
+      });
+    } else {
+      const ta = document.createElement('textarea');
+      ta.value = pwd;
+      document.body.appendChild(ta);
+      ta.select();
+      document.execCommand('copy');
+      document.body.removeChild(ta);
+    }
+    setCopiedPass(true);
+    setTimeout(() => setCopiedPass(false), 3000);
+  };
+
   const primaryColor = settings.primary_color || '#2563eb';
 
   if (isRealMode && (authState === 'AUTHORIZING' || authState === 'FAILED')) {
@@ -590,32 +648,35 @@ export function SuccessOffer({ settings, visitorId, visitorName, authUrl, openNd
     );
   }
 
+  const defaultTitle = 'Tudo certo!';
+  const defaultMessage = `Obrigado por nos visitar! Confira as opções e benefícios disponíveis para você.`;
+
   return (
     <>
-      <div className={`w-full max-w-md bg-white/95 backdrop-blur-md text-slate-900 rounded-3xl shadow-2xl overflow-hidden border border-white/20 p-6 sm:p-8 text-center space-y-4 animate-in fade-in zoom-in-95 transition-all ${bannerVisible ? 'blur-sm scale-95 opacity-50' : ''}`}>
-        
-        {isDemoMode ? (
-          <div className="bg-amber-50 border border-amber-200 text-amber-900 text-xs font-semibold py-2 px-4 rounded-xl mb-2 flex items-center justify-center gap-1.5 mx-auto">
-            <WifiOff className="w-4 h-4 text-amber-600 shrink-0" />
-            <span>Cadastro realizado com sucesso. Modo demonstração — roteador não conectado.</span>
-          </div>
-        ) : (
-          <div className="bg-blue-50 border border-blue-200 text-blue-800 text-xs font-semibold py-2 px-4 rounded-xl mb-2 flex items-center justify-center gap-1.5 mx-auto">
-            <Wifi className="w-4 h-4 text-blue-600 shrink-0" />
-            <span>Autorização enviada ao roteador</span>
-          </div>
-        )}
+      <div className={`w-full max-w-md bg-white/95 backdrop-blur-md text-slate-900 rounded-3xl shadow-2xl overflow-hidden border border-white/20 p-6 sm:p-8 text-center space-y-4 animate-in fade-in zoom-in-95 transition-all ${bannerVisible || wifiModalOpen ? 'blur-sm scale-95 opacity-50' : ''}`}>
 
         <div className="w-14 h-14 bg-emerald-100 text-emerald-600 rounded-full flex items-center justify-center mx-auto shadow-inner">
           <CheckCircle2 className="w-9 h-9" />
         </div>
 
         <div>
-          <h1 className="text-2xl font-extrabold text-slate-900">{settings.post_signup_title || 'Cadastro Concluído!'}</h1>
+          <h1 className="text-2xl font-extrabold text-slate-900">{settings.post_signup_title || defaultTitle}</h1>
           <p className="text-sm text-slate-600 mt-1">
-            {settings.post_signup_message || `Obrigado por se conectar, ${visitorName}!`}
+            {settings.post_signup_message || defaultMessage}
           </p>
         </div>
+
+        {/* BOTÃO PÓS-CADASTRO: VER REDE E SENHA DO WI-FI */}
+        {settings.customer_wifi_enabled !== false && (
+          <button
+            onClick={handleOpenWifiModal}
+            style={{ backgroundColor: primaryColor }}
+            className="w-full py-3.5 px-5 rounded-2xl text-white font-extrabold text-sm shadow-md hover:brightness-110 active:scale-[0.98] transition-all flex items-center justify-center gap-2"
+          >
+            <Wifi className="w-5 h-5" />
+            Ver rede e senha do Wi-Fi
+          </button>
+        )}
 
         {/* Carousel de mídias inline na tela de sucesso */}
         {settings.post_signup_promotions_enabled !== false && settings.promotions_carousel_enabled !== false && hasActiveSlides && (
@@ -687,6 +748,106 @@ export function SuccessOffer({ settings, visitorId, visitorName, authUrl, openNd
           onRedirect={handleMarketingRedirect}
         />
       </div>
+
+      {/* MODAL EXPANSÍVEL: INSTRUÇÕES E DADOS DO WI-FI */}
+      {wifiModalOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm animate-in fade-in">
+          <div className="w-full max-w-md bg-white rounded-3xl shadow-2xl overflow-hidden relative flex flex-col max-h-[85vh] sm:max-h-[90vh] animate-in zoom-in-95 p-6 text-left">
+            <button
+              onClick={() => setWifiModalOpen(false)}
+              className="absolute top-4 right-4 z-30 w-8 h-8 bg-slate-100 hover:bg-slate-200 text-slate-600 rounded-full flex items-center justify-center transition-colors"
+            >
+              <X className="w-5 h-5" />
+            </button>
+
+            <h2 className="text-lg font-black text-slate-900 mb-4 flex items-center gap-2">
+              <Wifi className="w-5 h-5 text-blue-600 shrink-0" />
+              {wifiData?.sectionTitle || 'Conecte-se ao Wi-Fi do estabelecimento'}
+            </h2>
+
+            {loadingWifi ? (
+              <div className="py-8 text-center space-y-3">
+                <Loader2 className="w-8 h-8 text-blue-600 animate-spin mx-auto" />
+                <p className="text-xs text-slate-500 font-medium">Buscando dados seguros da rede...</p>
+              </div>
+            ) : (
+              <div className="space-y-4 overflow-y-auto pr-1">
+                {/* Nome da Rede */}
+                <div className="p-3.5 bg-slate-50 border border-slate-200/80 rounded-2xl">
+                  <span className="text-[11px] font-bold text-slate-500 uppercase tracking-wider block mb-0.5">Nome da Rede (SSID)</span>
+                  <span className="text-base font-extrabold text-slate-900 font-mono">{wifiData?.networkName || settings.store_name}</span>
+                </div>
+
+                {/* Senha da Rede (se disponível) */}
+                {wifiData?.password !== null && wifiData?.password !== undefined && (
+                  <div className="p-3.5 bg-slate-50 border border-slate-200/80 rounded-2xl flex items-center justify-between">
+                    <div>
+                      <span className="text-[11px] font-bold text-slate-500 uppercase tracking-wider block mb-0.5">Senha do Wi-Fi</span>
+                      <span className="text-base font-extrabold text-slate-900 font-mono">
+                        {showPassText ? wifiData.password : '••••••••'}
+                      </span>
+                    </div>
+
+                    <div className="flex items-center gap-2">
+                      <button
+                        type="button"
+                        onClick={() => setShowPassText(!showPassText)}
+                        className="text-xs text-blue-600 font-bold px-2.5 py-1.5 bg-blue-50 hover:bg-blue-100 rounded-xl transition-colors"
+                      >
+                        {showPassText ? 'Ocultar' : 'Mostrar'}
+                      </button>
+
+                      {wifiData.passwordCopyEnabled && wifiData.password && (
+                        <button
+                          type="button"
+                          onClick={() => handleCopyPassword(wifiData.password!)}
+                          style={{ backgroundColor: primaryColor }}
+                          className="text-xs text-white font-bold px-3 py-1.5 rounded-xl shadow-xs hover:opacity-95 transition-all"
+                        >
+                          {copiedPass ? 'Senha copiada!' : 'Copiar senha'}
+                        </button>
+                      )}
+                    </div>
+                  </div>
+                )}
+
+                {/* Estrutura Padrão de Instruções Numeradas */}
+                <div className="p-4 bg-blue-50/50 border border-blue-100 rounded-2xl space-y-2 text-xs text-slate-800 font-medium">
+                  <span className="font-extrabold text-blue-900 block text-xs uppercase tracking-wider">Como conectar:</span>
+                  <ol className="list-decimal list-inside space-y-1.5 text-slate-700">
+                    <li>Abra as configurações do celular</li>
+                    <li>Entre na opção <strong>Wi-Fi</strong></li>
+                    <li>Selecione a rede “<strong>{wifiData?.networkName || settings.store_name}</strong>”</li>
+                    <li>Cole ou digite a senha acima</li>
+                  </ol>
+                </div>
+
+                {/* Texto de Instrução Adicional */}
+                {wifiData?.instructionText && (
+                  <p className="text-xs text-slate-600 leading-relaxed italic bg-slate-50 p-3 rounded-xl border border-slate-100">
+                    {wifiData.instructionText}
+                  </p>
+                )}
+
+                {/* Instruções Opcionais por Sistema Operacional */}
+                {wifiData?.androidInstructions && (
+                  <div className="p-3 bg-emerald-50/70 border border-emerald-200/80 rounded-xl text-xs text-emerald-900">
+                    <span className="font-bold block mb-1">Dica para Android:</span>
+                    {wifiData.androidInstructions}
+                  </div>
+                )}
+
+                {wifiData?.iosInstructions && (
+                  <div className="p-3 bg-purple-50/70 border border-purple-200/80 rounded-xl text-xs text-purple-900">
+                    <span className="font-bold block mb-1">Dica para iPhone (iOS):</span>
+                    {wifiData.iosInstructions}
+                  </div>
+                )}
+              </div>
+            )}
+          </div>
+        </div>
+      )}
 
       <PromoBanner
         visible={bannerVisible}

@@ -491,6 +491,159 @@ export function PostSignupSettings({ settings, setSettings }: SettingsTabProps) 
            </div>
         </div>
       </div>
+
+      {/* NOVO BLOCO: CONFIGURAÇÕES DO WI-FI PARA CLIENTES */}
+      <CustomerWifiSettingsSection settings={settings} setSettings={setSettings} />
+    </div>
+  );
+}
+
+function CustomerWifiSettingsSection({ settings, setSettings }: SettingsTabProps) {
+  const [showPassword, setShowPassword] = useState(false);
+
+  return (
+    <div className="bg-white rounded-2xl border border-slate-200/80 p-6 shadow-xs space-y-4">
+      <h2 className="text-base font-bold text-slate-900 flex items-center gap-2 border-b border-slate-100 pb-3">
+        <Smartphone className="w-5 h-5 text-blue-600" />
+        Configurações do Wi-Fi para clientes
+      </h2>
+
+      {/* AVISO IMPORTANTE DE SEGURANÇA */}
+      <div className="p-4 bg-amber-50/80 border border-amber-200 rounded-2xl flex items-start gap-3 text-xs text-amber-900 leading-relaxed font-medium">
+        <AlertCircle className="w-5 h-5 text-amber-600 shrink-0 mt-0.5" />
+        <div>
+          <strong>Aviso de Segurança:</strong> Utilize uma rede exclusiva para clientes. Não use a mesma rede de computadores, caixas, câmeras ou sistemas administrativos.
+        </div>
+      </div>
+
+      <div className="space-y-4 pt-2">
+        <label className="flex items-center gap-2.5 cursor-pointer text-sm font-medium text-slate-700">
+          <input
+            type="checkbox"
+            checked={settings.customer_wifi_enabled ?? true}
+            onChange={(e) => setSettings({ ...settings, customer_wifi_enabled: e.target.checked })}
+            className="w-4 h-4 rounded border-slate-300 text-blue-600 focus:ring-blue-500/30"
+          />
+          Exibir opção de Wi-Fi após cadastro
+        </label>
+
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div>
+            <label className="block text-xs font-semibold uppercase tracking-wider text-slate-600 mb-1">
+              Nome da Rede Wi-Fi (SSID)
+            </label>
+            <input
+              type="text"
+              value={settings.wifi_network_name || ''}
+              onChange={(e) => setSettings({ ...settings, wifi_network_name: e.target.value })}
+              placeholder="Ex: MinhaLoja_Clientes"
+              className="w-full px-4 py-2.5 rounded-xl border border-slate-200 text-sm focus:ring-2 focus:ring-blue-500/30"
+            />
+          </div>
+
+          <div>
+            <label className="block text-xs font-semibold uppercase tracking-wider text-slate-600 mb-1">
+              Senha da Rede Wi-Fi
+            </label>
+            <div className="relative flex items-center">
+              <input
+                type={showPassword ? 'text' : 'password'}
+                value={settings.wifi_network_password || ''}
+                onChange={(e) => setSettings({ ...settings, wifi_network_password: e.target.value })}
+                placeholder="Deixe em branco para manter a atual"
+                className="w-full px-4 py-2.5 pr-20 rounded-xl border border-slate-200 text-sm font-mono focus:ring-2 focus:ring-blue-500/30"
+              />
+              <button
+                type="button"
+                onClick={() => setShowPassword(!showPassword)}
+                className="absolute right-2 text-xs text-blue-600 font-semibold px-2 py-1 bg-slate-100 hover:bg-slate-200 rounded-lg"
+              >
+                {showPassword ? 'Ocultar' : 'Revelar'}
+              </button>
+            </div>
+            <p className="text-[11px] text-slate-400 mt-1">
+              * A senha permanece mascarada e protegida. Deixar em branco preserva a senha cadastrada.
+            </p>
+          </div>
+        </div>
+
+        <div className="space-y-2 pt-2 border-t border-slate-100">
+          <label className="flex items-center gap-2.5 cursor-pointer text-sm font-medium text-slate-700">
+            <input
+              type="checkbox"
+              checked={settings.wifi_password_visible ?? true}
+              onChange={(e) => setSettings({ ...settings, wifi_password_visible: e.target.checked })}
+              className="w-4 h-4 rounded border-slate-300 text-blue-600 focus:ring-blue-500/30"
+            />
+            Exibir senha para o visitante
+          </label>
+
+          <label className="flex items-center gap-2.5 cursor-pointer text-sm font-medium text-slate-700">
+            <input
+              type="checkbox"
+              checked={settings.wifi_password_copy_enabled ?? true}
+              onChange={(e) => setSettings({ ...settings, wifi_password_copy_enabled: e.target.checked })}
+              className="w-4 h-4 rounded border-slate-300 text-blue-600 focus:ring-blue-500/30"
+            />
+            Permitir copiar senha com 1 clique
+          </label>
+        </div>
+
+        <div className="space-y-4 pt-2 border-t border-slate-100">
+          <div>
+            <label className="block text-xs font-semibold uppercase tracking-wider text-slate-600 mb-1">
+              Título da Seção de Wi-Fi
+            </label>
+            <input
+              type="text"
+              value={settings.wifi_section_title || ''}
+              onChange={(e) => setSettings({ ...settings, wifi_section_title: e.target.value })}
+              placeholder="Conecte-se ao Wi-Fi do estabelecimento"
+              className="w-full px-4 py-2.5 rounded-xl border border-slate-200 text-sm focus:ring-2 focus:ring-blue-500/30"
+            />
+          </div>
+
+          <div>
+            <label className="block text-xs font-semibold uppercase tracking-wider text-slate-600 mb-1">
+              Texto de Instrução Adicional (Opcional)
+            </label>
+            <textarea
+              rows={2}
+              value={settings.wifi_instruction_text || ''}
+              onChange={(e) => setSettings({ ...settings, wifi_instruction_text: e.target.value })}
+              placeholder="Ex: Em caso de dúvidas, consulte nossos atendentes."
+              className="w-full px-4 py-2.5 rounded-xl border border-slate-200 text-sm focus:ring-2 focus:ring-blue-500/30"
+            />
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div>
+              <label className="block text-xs font-semibold uppercase tracking-wider text-slate-600 mb-1">
+                Instruções para Android (Opcional)
+              </label>
+              <textarea
+                rows={2}
+                value={settings.wifi_android_instructions || ''}
+                onChange={(e) => setSettings({ ...settings, wifi_android_instructions: e.target.value })}
+                placeholder="Ex: Desative os Dados Móveis se a rede pedir confirmação."
+                className="w-full px-4 py-2.5 rounded-xl border border-slate-200 text-sm focus:ring-2 focus:ring-blue-500/30"
+              />
+            </div>
+            <div>
+              <label className="block text-xs font-semibold uppercase tracking-wider text-slate-600 mb-1">
+                Instruções para iPhone (Opcional)
+              </label>
+              <textarea
+                rows={2}
+                value={settings.wifi_ios_instructions || ''}
+                onChange={(e) => setSettings({ ...settings, wifi_ios_instructions: e.target.value })}
+                placeholder="Ex: No iOS, selecione 'Permanecer Conectado'."
+                className="w-full px-4 py-2.5 rounded-xl border border-slate-200 text-sm focus:ring-2 focus:ring-blue-500/30"
+              />
+            </div>
+          </div>
+        </div>
+      </div>
     </div>
   );
 }

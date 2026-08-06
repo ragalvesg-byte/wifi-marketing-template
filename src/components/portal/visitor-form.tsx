@@ -9,11 +9,12 @@ import { getAnonymousSessionId } from '@/lib/events';
 interface VisitorFormProps {
   settings: StoreSettings;
   openNdsParams: OpenNdsParams;
-  onSuccess: (data: { visitorId?: string | null; visitorName: string; authUrl: string; totalVisits: number }) => void;
+  onSuccess: (data: { visitorId?: string | null; visitorName: string; authUrl: string; totalVisits: number; nextAction?: string }) => void;
   onBack?: () => void;
+  intent?: 'DEFAULT' | 'PROMOTIONS' | 'WIFI';
 }
 
-export function VisitorForm({ settings, openNdsParams, onSuccess, onBack }: VisitorFormProps) {
+export function VisitorForm({ settings, openNdsParams, onSuccess, onBack, intent = 'DEFAULT' }: VisitorFormProps) {
   const [name, setName] = useState('');
   const [phone, setPhone] = useState('');
   const [email, setEmail] = useState('');
@@ -21,6 +22,7 @@ export function VisitorForm({ settings, openNdsParams, onSuccess, onBack }: Visi
   const [city, setCity] = useState('');
   const [gender, setGender] = useState('');
   const [termsAccepted, setTermsAccepted] = useState(true);
+  const [marketingConsent, setMarketingConsent] = useState(false);
   const [loading, setLoading] = useState(false);
   const [errorMsg, setErrorMsg] = useState('');
 
@@ -81,6 +83,8 @@ export function VisitorForm({ settings, openNdsParams, onSuccess, onBack }: Visi
           date_of_birth: dob || undefined,
           city: city.trim() || undefined,
           gender: gender || undefined,
+          terms_accepted: termsAccepted,
+          marketing_consent: marketingConsent,
           mac_address: openNdsParams.clientmac,
           tok: openNdsParams.tok,
           ip_address: openNdsParams.clientip,
@@ -104,6 +108,7 @@ export function VisitorForm({ settings, openNdsParams, onSuccess, onBack }: Visi
         visitorName: data.visitorName || name,
         authUrl: data.authUrl,
         totalVisits: data.totalVisits || 1,
+        nextAction: data.nextAction || 'WIFI',
       });
     } catch {
       setErrorMsg('Erro de conexão. Verifique sua rede e tente novamente.');
@@ -118,6 +123,25 @@ export function VisitorForm({ settings, openNdsParams, onSuccess, onBack }: Visi
     settings.field_city_enabled ||
     settings.field_gender_enabled
   );
+
+  // Dynamic headers and descriptions based on intent
+  const formTitle = intent === 'PROMOTIONS'
+    ? 'Tenha acesso a promoções exclusivas'
+    : intent === 'WIFI'
+    ? 'Acesse o Wi-Fi para clientes'
+    : (settings.welcome_message || 'Complete seu cadastro');
+
+  const formDescription = intent === 'PROMOTIONS'
+    ? 'Cadastre-se rapidamente para conferir ofertas, cupons e benefícios exclusivos deste estabelecimento.'
+    : intent === 'WIFI'
+    ? 'Faça um cadastro rápido para visualizar o nome da rede, a senha e as instruções de conexão.'
+    : 'Preencha seus dados para acessar as opções e benefícios disponíveis no estabelecimento.';
+
+  const buttonLabel = intent === 'PROMOTIONS'
+    ? 'Ver promoções exclusivas'
+    : intent === 'WIFI'
+    ? 'Ver Dados do Wi-Fi'
+    : 'Conectar e Avançar';
 
   return (
     <div className="w-full max-w-md bg-white/95 backdrop-blur-md text-slate-900 rounded-3xl shadow-2xl overflow-hidden border border-white/20 p-6 sm:p-8 space-y-5 animate-in fade-in zoom-in-95 duration-200">
@@ -136,7 +160,8 @@ export function VisitorForm({ settings, openNdsParams, onSuccess, onBack }: Visi
             {settings.store_name.charAt(0)}
           </div>
         )}
-        <h1 className="text-xl font-extrabold text-slate-900 tracking-tight">{settings.welcome_message || 'Complete seu Cadastro'}</h1>
+        <h1 className="text-xl font-extrabold text-slate-900 tracking-tight">{formTitle}</h1>
+        <p className="text-xs text-slate-600 mt-1.5 leading-relaxed">{formDescription}</p>
       </div>
 
       {errorMsg && (
@@ -256,8 +281,8 @@ export function VisitorForm({ settings, openNdsParams, onSuccess, onBack }: Visi
           </div>
         )}
 
-        {/* Checkbox Termos LGPD */}
-        <div className="pt-1">
+        {/* Checkbox Termos LGPD (Obrigatório) */}
+        <div className="pt-1 space-y-2">
           <label className="flex items-start gap-2.5 cursor-pointer">
             <input
               type="checkbox"
@@ -268,6 +293,19 @@ export function VisitorForm({ settings, openNdsParams, onSuccess, onBack }: Visi
             <span className="text-[11px] text-slate-600 leading-normal">
               Aceito os <a href="#terms" className="underline font-medium text-slate-900">Termos de Uso</a> e a{' '}
               <a href="#privacy" className="underline font-medium text-slate-900">Política de Privacidade</a> para acesso à internet.
+            </span>
+          </label>
+
+          {/* Checkbox Comunicações Marketing WhatsApp (Opcional, desmarcado por padrão) */}
+          <label className="flex items-start gap-2.5 cursor-pointer pt-1 border-t border-slate-100">
+            <input
+              type="checkbox"
+              checked={marketingConsent}
+              onChange={(e) => setMarketingConsent(e.target.checked)}
+              className="mt-0.5 w-4 h-4 rounded text-blue-600 focus:ring-blue-500 border-slate-300"
+            />
+            <span className="text-[11px] text-slate-600 leading-normal font-medium">
+              Aceito receber promoções e novidades pelo WhatsApp.
             </span>
           </label>
         </div>
@@ -285,7 +323,7 @@ export function VisitorForm({ settings, openNdsParams, onSuccess, onBack }: Visi
             </>
           ) : (
             <>
-              Conectar e Avançar
+              {buttonLabel}
               <ArrowRight className="w-5 h-5" />
             </>
           )}

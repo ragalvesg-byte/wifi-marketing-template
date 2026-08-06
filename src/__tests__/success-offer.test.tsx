@@ -80,7 +80,7 @@ describe('SuccessOffer Component', () => {
       await Promise.resolve();
     });
 
-    expect(screen.getByText(/Modo demonstração/i)).toBeInTheDocument();
+    expect(screen.queryByText(/Modo demonstração/i)).not.toBeInTheDocument();
     expect(screen.getByText('Sucesso!')).toBeInTheDocument();
     expect(screen.getByText('Sua internet está ativa.')).toBeInTheDocument();
   });

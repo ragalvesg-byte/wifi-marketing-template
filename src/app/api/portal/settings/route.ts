@@ -67,7 +67,15 @@ const ALLOWED_SETTING_FIELDS = [
   'pre_signup_promotions_enabled',
   'post_signup_promotions_enabled',
   'promotions_button_enabled',
-  'promotions_carousel_enabled'
+  'promotions_carousel_enabled',
+  'customer_wifi_enabled',
+  'wifi_network_name',
+  'wifi_password_visible',
+  'wifi_password_copy_enabled',
+  'wifi_section_title',
+  'wifi_instruction_text',
+  'wifi_android_instructions',
+  'wifi_ios_instructions'
 ];
 
 function filterPublicSettings(settings: any) {

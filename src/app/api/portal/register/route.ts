@@ -6,6 +6,7 @@ import { getRouterDriver } from '@/lib/routers';
 import { isValidMac, isValidIp, sanitizeToken } from '@/lib/opennds';
 import { RegisterVisitorPayload } from '@/types/database';
 import { MOCK_STORE_SETTINGS } from '@/lib/supabase/mock-data';
+import { createVisitorSession } from '@/lib/session';
 
 const rateLimitMap = new Map<string, { count: number; resetAt: number }>();
 
@@ -208,17 +209,24 @@ export async function POST(request: Request) {
         visitorId = existingVisitor.id;
         totalVisits = (existingVisitor.total_visits || 1) + 1;
 
+        const updateData: any = {
+          name: body.name.trim(),
+          email: fieldSettings.field_email_enabled ? (body.email || existingVisitor.email) : existingVisitor.email,
+          date_of_birth: fieldSettings.field_dob_enabled ? (body.date_of_birth || existingVisitor.date_of_birth) : existingVisitor.date_of_birth,
+          city: fieldSettings.field_city_enabled ? (body.city || existingVisitor.city) : existingVisitor.city,
+          gender: fieldSettings.field_gender_enabled ? (body.gender || existingVisitor.gender) : existingVisitor.gender,
+          total_visits: totalVisits,
+          last_seen_at: new Date().toISOString(),
+        };
+
+        if (body.marketing_consent !== undefined) {
+          updateData.marketing_consent = Boolean(body.marketing_consent);
+          updateData.marketing_consent_at = body.marketing_consent ? new Date().toISOString() : null;
+        }
+
         await supabase
           .from('visitors')
-          .update({
-            name: body.name.trim(),
-            email: fieldSettings.field_email_enabled ? (body.email || existingVisitor.email) : existingVisitor.email,
-            date_of_birth: fieldSettings.field_dob_enabled ? (body.date_of_birth || existingVisitor.date_of_birth) : existingVisitor.date_of_birth,
-            city: fieldSettings.field_city_enabled ? (body.city || existingVisitor.city) : existingVisitor.city,
-            gender: fieldSettings.field_gender_enabled ? (body.gender || existingVisitor.gender) : existingVisitor.gender,
-            total_visits: totalVisits,
-            last_seen_at: new Date().toISOString(),
-          })
+          .update(updateData)
           .eq('id', visitorId);
       } else {
         isNewVisitor = true;
@@ -232,6 +240,8 @@ export async function POST(request: Request) {
             city: fieldSettings.field_city_enabled ? (body.city || null) : null,
             gender: fieldSettings.field_gender_enabled ? (body.gender || null) : null,
             terms_accepted: true,
+            marketing_consent: Boolean(body.marketing_consent),
+            marketing_consent_at: body.marketing_consent ? new Date().toISOString() : null,
             total_visits: 1,
           })
           .select()
@@ -302,17 +312,8 @@ export async function POST(request: Request) {
       }
     }
 
-    // 4. Salvar Cookie seguro no navegador para identificação persistente (1 ano)
-    const cookieStore = await cookies();
-    cookieStore.set({
-      name: 'wifi_visitor_device_token',
-      value: visitorId,
-      path: '/',
-      maxAge: 365 * 24 * 60 * 60,
-      httpOnly: true,
-      sameSite: 'lax',
-      secure: process.env.NODE_ENV === 'production',
-    });
+    // 4. Criar sessão segura com token em cookie HttpOnly
+    await createVisitorSession(visitorId, validMac || '00:00:00:00:00:00');
 
     // 5. Utilizar a arquitetura de Driver de Roteador para construir a URL de liberação
     const routerDriver = getRouterDriver('opennds');
@@ -334,14 +335,14 @@ export async function POST(request: Request) {
 
     return NextResponse.json({
       success: true,
+      visitorIdentified: true,
+      nextAction: 'WIFI',
       authUrl,
       visitorName: body.name.trim(),
       visitorId,
       totalVisits,
       isDemoMode: !isRealRouterMode,
-      message: !isRealRouterMode
-        ? 'Cadastro realizado com sucesso. Modo demonstração — roteador não conectado.'
-        : 'Autorização enviada ao roteador.',
+      message: 'Cadastro realizado com sucesso.',
     });
   } catch (error) {
     console.error('Erro no registro do visitante:', error);

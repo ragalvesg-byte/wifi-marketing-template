@@ -127,8 +127,8 @@ export async function POST(request: Request) {
       post_signup_action: body.post_signup_action || 'SHOW_MESSAGE',
       post_signup_banner_enabled: body.post_signup_banner_enabled ?? false,
       post_signup_banner_closable: body.post_signup_banner_closable ?? true,
-      post_signup_title: body.post_signup_title || 'Internet liberada!',
-      post_signup_message: body.post_signup_message || 'Aproveite sua conexão. Obrigado por nos visitar!',
+      post_signup_title: body.post_signup_title || 'Tudo certo!',
+      post_signup_message: body.post_signup_message || 'Obrigado por nos visitar! Confira as opções e benefícios disponíveis para você.',
       post_signup_url: sanitizedPostSignupUrl,
       post_signup_promo_image_url: sanitizedPostSignupPromoImage,
       post_signup_promo_title: body.post_signup_promo_title,
@@ -142,6 +142,15 @@ export async function POST(request: Request) {
       post_signup_show_instagram: body.post_signup_show_instagram ?? false,
       post_signup_show_menu: body.post_signup_show_menu ?? false,
       post_signup_show_google_review: body.post_signup_show_google_review ?? false,
+
+      customer_wifi_enabled: body.customer_wifi_enabled ?? true,
+      wifi_network_name: body.wifi_network_name ?? '',
+      wifi_password_visible: body.wifi_password_visible ?? true,
+      wifi_password_copy_enabled: body.wifi_password_copy_enabled ?? true,
+      wifi_section_title: body.wifi_section_title || 'Conecte-se ao Wi-Fi do estabelecimento',
+      wifi_instruction_text: body.wifi_instruction_text ?? '',
+      wifi_android_instructions: body.wifi_android_instructions ?? '',
+      wifi_ios_instructions: body.wifi_ios_instructions ?? '',
 
       field_email_enabled: body.field_email_enabled ?? false,
       field_dob_enabled: body.field_dob_enabled ?? false,
@@ -169,9 +178,19 @@ export async function POST(request: Request) {
 
     const { data: current } = await supabase
       .from('store_settings')
-      .select('id')
+      .select('id, wifi_network_password')
       .limit(1)
       .single();
+
+    // Tratamento seguro da senha do Wi-Fi: se for vazia ou máscara ••••••••, preserva a senha atual do banco
+    const isPasswordMasked = typeof body.wifi_network_password === 'string' && /^[•]+$/.test(body.wifi_network_password.trim());
+    const isPasswordEmpty = !body.wifi_network_password || !body.wifi_network_password.trim();
+
+    let finalWifiPassword = current?.wifi_network_password || '';
+    if (!isPasswordEmpty && !isPasswordMasked) {
+      finalWifiPassword = body.wifi_network_password!.trim();
+    }
+    (payload as any).wifi_network_password = finalWifiPassword;
 
     if (current?.id) {
       const { error: updateError } = await supabase
