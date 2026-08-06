@@ -90,7 +90,7 @@ function PromocoesContent() {
 
   const handleBack = () => {
     const params = searchParams.toString();
-    router.push(`/portal${params ? '?' + params : ''}`);
+    router.push(`/portal/concluido${params ? '?' + params : ''}`);
   };
 
   const primaryColor = settings?.primary_color || '#2563eb';
@@ -235,7 +235,7 @@ function PromocoesContent() {
           onClick={handleBack}
           className="w-full py-3 rounded-2xl bg-white/10 hover:bg-white/15 border border-white/10 font-bold text-xs text-slate-300 transition-all flex items-center justify-center gap-1.5 active:scale-[0.98]"
         >
-          Voltar para a Conexão
+          Voltar às opções
         </button>
 
       </div>

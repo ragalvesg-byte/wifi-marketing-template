@@ -108,7 +108,7 @@ export default function PortalPage({ searchParams }: PortalPageProps) {
       window.location.href = `/portal/promocoes${window.location.search}`;
       return;
     }
-    setStep('SUCCESS');
+    window.location.href = `/portal/concluido${window.location.search}`;
   };
 
   return (

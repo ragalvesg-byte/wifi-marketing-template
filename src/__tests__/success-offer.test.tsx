@@ -312,16 +312,14 @@ describe('SuccessOffer Component', () => {
     // Não deve ter redirecionado automaticamente
     expect(window.location.href).toBe('');
 
-    // Deve permitir clique manual para navegar
-    const button = screen.getByRole('button', { name: /Navegar na Internet/i });
+    // Deve permitir visualização de dados de Wi-Fi
+    const button = screen.getByRole('button', { name: /Ver rede e senha do Wi-Fi/i });
     expect(button).toBeInTheDocument();
-    fireEvent.click(button);
-    expect(window.location.href).toBe('https://fallback.com');
 
     window.location = originalLocation;
   });
 
-  it('deve suportar o modo ON_CLICK: sem timer e redirecionamento somente após clique', async () => {
+  it('deve suportar o modo ON_CLICK: sem timer e exibição do botão Ver rede e senha do Wi-Fi', async () => {
     const redirectSettings = {
       ...baseSettings,
       post_signup_redirect_mode: 'ON_CLICK' as const,
@@ -352,9 +350,8 @@ describe('SuccessOffer Component', () => {
     });
     expect(window.location.href).toBe('');
 
-    const button = screen.getByRole('button', { name: /Navegar na Internet/i });
-    fireEvent.click(button);
-    expect(window.location.href).toBe('https://fallback.com');
+    const button = screen.getByRole('button', { name: /Ver rede e senha do Wi-Fi/i });
+    expect(button).toBeInTheDocument();
 
     window.location = originalLocation;
   });
@@ -525,5 +522,23 @@ describe('SuccessOffer Component', () => {
     // Como tem button_url, deve exibir o botão
     expect(screen.getByRole('button', { name: 'Oferta Especial Com Link' })).toBeInTheDocument();
     expect(screen.queryByText(/Apresente esta tela ao atendente/i)).not.toBeInTheDocument();
+  });
+
+  it('Fase 1: deve exibir o botão "Ver rede e senha do Wi-Fi" e NUNCA exibir "Navegar na Internet"', async () => {
+    render(
+      <SuccessOffer
+        settings={baseSettings}
+        visitorName="João"
+        authUrl=""
+        openNdsParams={baseOpenNdsParams}
+      />
+    );
+
+    await act(async () => {
+      await Promise.resolve();
+    });
+
+    expect(screen.getByRole('button', { name: /Ver rede e senha do Wi-Fi/i })).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: /Navegar na Internet/i })).not.toBeInTheDocument();
   });
 });

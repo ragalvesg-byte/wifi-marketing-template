@@ -204,18 +204,6 @@ export function CountdownRedirect({
     );
   }
 
-  if (!bannerVisible) {
-    return (
-      <button
-        onClick={onRedirect}
-        style={{ backgroundColor: primaryColor }}
-        className="w-full py-4 rounded-xl text-white font-bold text-base shadow-lg hover:opacity-95 transition-all flex items-center justify-center gap-2 mt-2"
-      >
-        Navegar na Internet
-      </button>
-    );
-  }
-
   return null;
 }
 
