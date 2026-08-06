@@ -47,7 +47,7 @@ export default async function ContactsPage() {
         </p>
       </div>
 
-      <ContactsTable visitors={visitors} />
+      <ContactsTable initialVisitors={visitors} />
     </div>
   );
 }

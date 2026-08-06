@@ -153,7 +153,7 @@ export default async function DashboardPage() {
             Últimos Visitantes Cadastrados
           </h2>
         </div>
-        <ContactsTable visitors={visitors} />
+        <ContactsTable initialVisitors={visitors} compact={true} />
       </div>
     </div>
   );
